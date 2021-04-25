@@ -8,3 +8,10 @@ typedef unsigned int  uint32;
 typedef unsigned long uint64;
 
 typedef uint64 pde_t;
+
+// task 2.1.1
+#define SIG_DFL 0
+#define SIG_IGN 1
+#define SIGKILL 9
+#define SIGSTOP 17
+#define SIGCONT 19

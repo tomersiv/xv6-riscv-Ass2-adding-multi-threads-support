@@ -76,11 +76,11 @@ sys_sleep(void)
 uint64
 sys_kill(void)
 {
-  int pid;
+  int pid, signum;
 
-  if(argint(0, &pid) < 0)
+  if(argint(0, &pid) < 0 || argint(1, &signum) < 0)
     return -1;
-  return kill(pid);
+  return kill(pid, signum);
 }
 
 // return how many clock tick interrupts have occurred
@@ -94,4 +94,34 @@ sys_uptime(void)
   xticks = ticks;
   release(&tickslock);
   return xticks;
+}
+
+// Task 2.1.3 - sigprocmask system call
+uint64 
+sys_sigprocmask(void)
+{
+  int mask;
+  if(argint(0, &mask) < 0)
+    return -1;
+  return sigprocmask(mask);  
+}
+
+// Task 2.1.4 - sigaction system call
+uint64
+sys_sigaction(void){
+  int signum;
+  const struct sigaction *act;
+  struct sigaction *oldact;
+
+  if(argint(0, &signum) < 0 || argaddr(1, (uint64 *)&act) < 0 || argaddr(2, (uint64 *)&oldact) < 0)
+    return -1;
+
+  return sigaction(signum, act, oldact);
+}
+
+uint64
+sys_sigret(void){
+  // TODO: chech if need to check for errors
+  sigret();
+  return 0;
 }

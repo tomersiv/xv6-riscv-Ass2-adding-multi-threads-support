@@ -36,3 +36,9 @@ entry("getpid");
 entry("sbrk");
 entry("sleep");
 entry("uptime");
+# task 2.1.3 - sigprocmask syscall 
+entry("sigprocmask");
+# task 2.1.4 - sigaction syscall
+entry("sigaction");
+# task 2.1.5 - sigret system call
+entry("sigret");

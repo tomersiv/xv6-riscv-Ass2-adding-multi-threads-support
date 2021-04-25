@@ -105,6 +105,15 @@ extern uint64 sys_wait(void);
 extern uint64 sys_write(void);
 extern uint64 sys_uptime(void);
 
+// Task 2.1.3 - sigprocmask system call
+extern uint64 sys_sigprocmask(void);
+
+// Task 2.1.4 - sigaction system call
+extern uint64 sys_sigaction(void);
+
+// task 2.1.5 - sigret system call
+extern uint64 sys_sigret(void);
+
 static uint64 (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
 [SYS_exit]    sys_exit,
@@ -127,6 +136,12 @@ static uint64 (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+// Task 2.1.3 - sigprocmask system call
+[SYS_sigprocmask]  sys_sigprocmask,
+// Task 2.1.4 - sigaction system call
+[SYS_sigaction]   sys_sigaction,
+// task 2.1.5 - sigret system call
+[SYS_sigret]   sys_sigret
 };
 
 void

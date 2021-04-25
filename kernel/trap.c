@@ -98,7 +98,7 @@ usertrapret(void)
 
   // send syscalls, interrupts, and exceptions to trampoline.S
   w_stvec(TRAMPOLINE + (uservec - trampoline));
-
+  
   // set up trapframe values that uservec will need when
   // the process next re-enters the kernel.
   p->trapframe->kernel_satp = r_satp();         // kernel page table
@@ -115,6 +115,9 @@ usertrapret(void)
   x |= SSTATUS_SPIE; // enable interrupts in user mode
   w_sstatus(x);
 
+  // task 2.4 - call the function of handling a user-space signal
+  handle_signal();
+  
   // set S Exception Program Counter to the saved user pc.
   w_sepc(p->trapframe->epc);
 

@@ -105,4 +105,18 @@ struct proc {
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
+  uint pending_sig;            // task 2.1.1
+  uint sig_mask;               // task 2.1.1
+  uint mask_backup;            // task 2.4 - backup of the mask before signal handlings
+  void *sig_handlers[32];      // task 2.1.1
+  uint handlers_mask[32];      // task 2.1.4 - blocked signals during handlers execution
+  struct trapframe *usertrap_backup;  // task 2.1.1
+  int stopped;                 // task 2.3.1
+  int handling_signal;         // task 2.4 - a flag that indicates that a signal is being handled
+};
+
+// Task 2.1.4 - defining sigaction struct
+struct sigaction {
+  void (*sa_handler)(int);
+  uint sigmask;
 };

@@ -116,6 +116,14 @@ exec(char *path, char **argv)
   p->trapframe->sp = sp; // initial stack pointer
   proc_freepagetable(oldpagetable, oldsz);
 
+  // Task 2.1.2 - Updating process creation behavior
+  p->sig_mask = 0;
+  for (i = 0; i < 32; i++){
+    if(p->sig_handlers[i] != (void *)SIG_IGN){
+      p->sig_handlers[i] = (void *)SIG_DFL;
+    }
+  }
+
   return argc; // this ends up in a0, the first argument to main(argc, argv)
 
  bad:
