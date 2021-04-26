@@ -165,10 +165,8 @@ found:
   p->pending_sig = 0;
   p->sig_mask = 0;
   p->usertrap_backup = 0;
-  // task 2.3.1 - SIGSTOP/SIGCONT support
-  p->stopped = 0;
-  // task 2.4 - flag to mark when a signal is being handled
-  p->handling_signal = 0;
+  // task 2.4 - flag to mark when a user signal is being handled
+  p->handling_usersignal = 0;
 
   return p;
 }
@@ -342,6 +340,7 @@ int fork(void)
   for (i = 0; i < 32; i++)
   {
     np->sig_handlers[i] = p->sig_handlers[i];
+    np->handlers_mask[i] = p->handlers_mask[i];
   }
 
   release(&np->lock);
@@ -480,56 +479,30 @@ int wait(uint64 addr)
 //  - swtch to start running that process.
 //  - eventually that process transfers control
 //    via swtch back to the scheduler.
-void scheduler(void)
+void
+scheduler(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
-
+  
   c->proc = 0;
-  for (;;)
-  {
+  for(;;){
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
 
-    for (p = proc; p < &proc[NPROC]; p++)
-    {
+    for(p = proc; p < &proc[NPROC]; p++) {
       acquire(&p->lock);
-      if (p->state == RUNNABLE)
-      {
-        // Task 2.3 + 2.4 - handling a process that received a SIGSTOP signal
-        if (p->stopped)
-        {
-          if ((p->pending_sig & (1 << SIGCONT)) && p->sig_handlers[SIGCONT] == (void *)SIG_DFL)
-          {
-            sigcont_handler();
-            p->pending_sig &= ~(1 << SIGCONT); // clear SIGCONT bit from the pending signals
-          }
-          else
-          {
-            for (int i = 0; i < 32; i++)
-            {
-              if ((i != SIGSTOP && i != SIGKILL) && ((p->pending_sig & (1 << i)) && p->sig_handlers[i] == sigcont_handler))
-              {
-                sigcont_handler();
-                p->pending_sig &= ~(1 << SIGCONT); // clear SIGCONT bit from the pending signals
-                break;
-              }
-            }
-          }
-        }
-        if (!p->stopped)
-        {
-          // Switch to chosen process.  It is the process's job
-          // to release its lock and then reacquire it
-          // before jumping back to us.
-          p->state = RUNNING;
-          c->proc = p;
-          swtch(&c->context, &p->context);
+      if(p->state == RUNNABLE) {
+        // Switch to chosen process.  It is the process's job
+        // to release its lock and then reacquire it
+        // before jumping back to us.
+        p->state = RUNNING;
+        c->proc = p;
+        swtch(&c->context, &p->context);
 
-          // Process is done running for now.
-          // It should have changed its p->state before coming back.
-          c->proc = 0;
-        }
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
       }
       release(&p->lock);
     }
@@ -745,7 +718,7 @@ uint sigprocmask(uint sigmask)
 
   if (!(1 << SIGKILL & sigmask) && !(1 << SIGSTOP & sigmask))
   {
-    p->sig_mask = sigmask; 
+    p->sig_mask = sigmask;
   }
 
   release(&p->lock);
@@ -786,16 +759,55 @@ void sigkill_handler()
   p->killed = 1;
 }
 
+// check if SIGCONT is pending with SIG_DFL as handler, and SIGCONT is not blocked
+// returns 1 if the condition is true and 0 if it's false.
+int condition1()
+{
+  struct proc *p = myproc();
+  if ((p->pending_sig & (1 << SIGCONT)) && (p->sig_handlers[SIGCONT] == SIG_DFL) &&
+      !(p->sig_mask & (1 << SIGCONT)))
+  {
+    return 1;
+  }
+  return 0;
+}
+
+// check if a signal is pending with SIGCONT as handler, and the signal is not blocked.
+// returns the signal number if the condition is true and -1 if it's false.
+int condition2()
+{
+  struct proc *p = myproc();
+  int i;
+  for (i = 0; i < 32; i++)
+  {
+    if (((1 << i) & p->pending_sig) && p->sig_handlers[i] == (void *)SIGCONT && 
+        !(p->sig_mask & (1 << i)))
+    {
+      return i;
+    }
+  }
+  return -1;
+}
+
 void sigstop_handler()
 {
   struct proc *p = myproc();
-  p->stopped = 1;
-}
+  int signum = -1;
+  while (!condition1() && ((signum = condition2()) == -1))
+  {
+    yield();
+  }
 
-void sigcont_handler()
-{
-  struct proc *p = myproc();
-  p->stopped = 0;
+  if (signum == -1)
+  {
+    p->pending_sig &= ~(1 << SIGCONT);
+  }
+  else
+  {
+    p->pending_sig &= ~(1 << signum);
+  }
+
+  return;
 }
 
 void sigret(void)
@@ -807,10 +819,10 @@ void sigret(void)
 
   // restore stack state to be the state before handeling the signals
   p->trapframe->sp += sizeof(struct trapframe);
-  p->handling_signal = 0;
+  p->handling_usersignal = 0;
 }
 
-// task 2.4 
+// task 2.4
 void handle_signal()
 {
   struct proc *p = myproc();
@@ -818,7 +830,7 @@ void handle_signal()
   int i;
   for (i = 0; i < 32; i++)
   {
-    if ((p->pending_sig & (1 << i)) && (!p->handling_signal) && !((1 << i) & p->sig_mask)) // check if the signal is pending and if we are currently handling a signal
+    if ((p->pending_sig & (1 << i)) && (!p->handling_usersignal) && !((1 << i) & p->sig_mask)) // check if the signal is pending and if we are currently handling a signal
     {
       // handle signals according to signal handler type
       if (p->sig_handlers[i] == (void *)SIG_DFL)
@@ -829,7 +841,7 @@ void handle_signal()
         }
         else if (i == SIGCONT)
         {
-          sigcont_handler();
+          // if SIGCONT arrived before SIGSTOP just clear the appropriate bit in p->pending_signal (at the end of this function)
         }
         else
         {
@@ -838,8 +850,7 @@ void handle_signal()
       }
       else if (p->sig_handlers[i] == (void *)SIG_IGN)
       {
-        p->pending_sig &= ~(1 << i);
-        continue;
+        // just clear the appropriate bit in p->pending_signal (at the end of this function)
       }
       else if (p->sig_handlers[i] == (void *)SIGKILL)
       {
@@ -851,16 +862,16 @@ void handle_signal()
       }
       else if (p->sig_handlers[i] == (void *)SIGCONT)
       {
-        sigcont_handler();
+        // if SIGCONT arrived before SIGSTOP just clear the appropriate bit in p->pending_signal (at the end of this function)
       }
-      else 
+      else
       {
-        // handle user-space signal handlers 
-        p->handling_signal = 1;
+        // handle user-space signal handlers
+        p->handling_usersignal = 1;
         // TODO: check this at reception hours
         p->sig_mask = p->handlers_mask[i] | (1 << i);
 
-        // before execution of the user-space handler - backup mask 
+        // before execution of the user-space handler - backup mask
         p->mask_backup = p->sig_mask;
 
         // backup trapframe
@@ -872,13 +883,11 @@ void handle_signal()
         uint64 size = (uint64)&sigret_end - (uint64)&sigret_start;
         p->trapframe->sp -= size;
         copyout(p->pagetable, (uint64)p->trapframe->sp, (char *)&sigret_start, size);
-
-        p->trapframe->a0 = i; // store signal number
+        p->trapframe->a0 = i;                // store signal number
         p->trapframe->ra = p->trapframe->sp; // store sigret system call at the return address
 
         p->trapframe->epc = (uint64)p->sig_handlers[i]; // program counter points to the user-space handler function
       }
-
       p->pending_sig &= ~(1 << i);
     }
   }

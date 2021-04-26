@@ -1,3 +1,6 @@
+// task 3.1
+#define NTHREAD = 8;
+
 // Saved registers for kernel context switches.
 struct context {
   uint64 ra;
@@ -111,12 +114,23 @@ struct proc {
   void *sig_handlers[32];      // task 2.1.1
   uint handlers_mask[32];      // task 2.1.4 - blocked signals during handlers execution
   struct trapframe *usertrap_backup;  // task 2.1.1
-  int stopped;                 // task 2.3.1
-  int handling_signal;         // task 2.4 - a flag that indicates that a signal is being handled
+  int handling_usersignal;         // task 2.4 - a flag that indicates that a user signal is being handled
 };
 
 // Task 2.1.4 - defining sigaction struct
 struct sigaction {
   void (*sa_handler)(int);
   uint sigmask;
+};
+
+// Task 3.1 = defining thread struct
+struct thread {
+  enum procstate state;        // Thread state
+  void *chan;                  // If non-zero, sleeping on chan
+  int killed;                  // If non-zero, have been killed
+  int xstate;                  // Exit status to be returned in kthread_join function
+  int tid;                     // Thread ID
+  struct proc *parent;         // Thread's Parent process
+  uint64 kstack;               // Virtual address of kernel stack
+  
 };

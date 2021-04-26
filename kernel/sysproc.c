@@ -121,7 +121,6 @@ sys_sigaction(void){
 
 uint64
 sys_sigret(void){
-  // TODO: chech if need to check for errors
   sigret();
   return 0;
 }
