@@ -89,9 +89,19 @@ myproc(void)
 {
   push_off();
   struct cpu *c = mycpu();
-  struct proc *p = c->proc;
+  struct proc *p = c->thread->parent;
   pop_off();
   return p;
+}
+
+struct thread *
+mythread(void)
+{
+  push_off();
+  struct cpu *c = mycpu();
+  struct thread *t = c->thread;
+  pop_off();
+  return t;
 }
 
 int allocpid()
@@ -483,28 +493,30 @@ void
 scheduler(void)
 {
   struct proc *p;
+  struct thread *t;
   struct cpu *c = mycpu();
   
-  c->proc = 0;
+  c->thread = 0;
   for(;;){
     // Avoid deadlock by ensuring that devices can interrupt.
     intr_on();
 
     for(p = proc; p < &proc[NPROC]; p++) {
-      acquire(&p->lock);
-      if(p->state == RUNNABLE) {
+      for(t = p->thread; t < &p->thread[NTHREAD]; t++)
+      acquire(&t->lock);
+      if(t->state == RUNNABLE) {
         // Switch to chosen process.  It is the process's job
         // to release its lock and then reacquire it
         // before jumping back to us.
-        p->state = RUNNING;
-        c->proc = p;
-        swtch(&c->context, &p->context);
+        t->state = RUNNING;
+        c->thread = t;
+        swtch(&c->context, &t->context);
 
         // Process is done running for now.
         // It should have changed its p->state before coming back.
-        c->proc = 0;
+        c->thread = 0;
       }
-      release(&p->lock);
+      release(&t->lock);
     }
   }
 }
@@ -519,30 +531,30 @@ scheduler(void)
 void sched(void)
 {
   int intena;
-  struct proc *p = myproc();
+  struct thread *t = mythread();
 
-  if (!holding(&p->lock))
+  if (!holding(&t->lock))
     panic("sched p->lock");
   if (mycpu()->noff != 1)
     panic("sched locks");
-  if (p->state == RUNNING)
+  if (t->state == RUNNING)
     panic("sched running");
   if (intr_get())
     panic("sched interruptible");
 
   intena = mycpu()->intena;
-  swtch(&p->context, &mycpu()->context);
+  swtch(&t->context, &mycpu()->context);
   mycpu()->intena = intena;
 }
 
 // Give up the CPU for one scheduling round.
 void yield(void)
 {
-  struct proc *p = myproc();
-  acquire(&p->lock);
-  p->state = RUNNABLE;
+  struct thread *t = mythread();
+  acquire(&t->lock);
+  t->state = RUNNABLE;
   sched();
-  release(&p->lock);
+  release(&t->lock);
 }
 
 // A fork child's very first scheduling by scheduler()
@@ -552,7 +564,7 @@ void forkret(void)
   static int first = 1;
 
   // Still holding p->lock from scheduler.
-  release(&myproc()->lock);
+  release(&myproc()->lock); // TODO: check if we need to change myproc() to mythread()
 
   if (first)
   {
@@ -570,7 +582,7 @@ void forkret(void)
 // Reacquires lock when awakened.
 void sleep(void *chan, struct spinlock *lk)
 {
-  struct proc *p = myproc();
+  struct thread *t = mythread();
 
   // Must acquire p->lock in order to
   // change p->state and then call sched.
@@ -579,20 +591,20 @@ void sleep(void *chan, struct spinlock *lk)
   // (wakeup locks p->lock),
   // so it's okay to release lk.
 
-  acquire(&p->lock); //DOC: sleeplock1
+  acquire(&t->lock); //DOC: sleeplock1
   release(lk);
 
   // Go to sleep.
-  p->chan = chan;
-  p->state = SLEEPING;
+  t->chan = chan;
+  t->state = SLEEPING;
 
   sched();
 
   // Tidy up.
-  p->chan = 0;
+  t->chan = 0;
 
   // Reacquire original lock.
-  release(&p->lock);
+  release(&t->lock);
   acquire(lk);
 }
 

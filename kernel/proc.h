@@ -1,5 +1,5 @@
 // task 3.1
-#define NTHREAD = 8;
+#define NTHREAD 8
 
 // Saved registers for kernel context switches.
 struct context {
@@ -23,7 +23,7 @@ struct context {
 
 // Per-CPU state.
 struct cpu {
-  struct proc *proc;          // The process running on this cpu, or null.
+  struct thread *thread;      // The thread running on this cpu, or null.
   struct context context;     // swtch() here to enter scheduler().
   int noff;                   // Depth of push_off() nesting.
   int intena;                 // Were interrupts enabled before push_off()?
@@ -87,7 +87,7 @@ enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 // Per-process state
 struct proc {
-  struct spinlock lock;
+  struct spinlock lock;       // TODO: i think we need to delete this
 
   // p->lock must be held when using these:
   enum procstate state;        // Process state
@@ -103,8 +103,8 @@ struct proc {
   uint64 kstack;               // Virtual address of kernel stack
   uint64 sz;                   // Size of process memory (bytes)
   pagetable_t pagetable;       // User page table
-  struct trapframe *trapframe; // data page for trampoline.S
-  struct context context;      // swtch() here to run process
+  // struct trapframe *trapframe; // TODO: i think we need to delete this. data page for trampoline.S
+  // struct context context;   // TODO: i think we need to delete this. swtch() here to run process
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
@@ -115,6 +115,7 @@ struct proc {
   uint handlers_mask[32];      // task 2.1.4 - blocked signals during handlers execution
   struct trapframe *usertrap_backup;  // task 2.1.1
   int handling_usersignal;         // task 2.4 - a flag that indicates that a user signal is being handled
+  struct thread thread[NTHREAD];  // Task 3.1
 };
 
 // Task 2.1.4 - defining sigaction struct
@@ -125,6 +126,7 @@ struct sigaction {
 
 // Task 3.1 = defining thread struct
 struct thread {
+  struct spinlock lock;
   enum procstate state;        // Thread state
   void *chan;                  // If non-zero, sleeping on chan
   int killed;                  // If non-zero, have been killed
@@ -132,5 +134,6 @@ struct thread {
   int tid;                     // Thread ID
   struct proc *parent;         // Thread's Parent process
   uint64 kstack;               // Virtual address of kernel stack
-  
+  struct trapframe *trapframe; // data page for trampoline.S
+  struct context context;      // swtch() here to run thread
 };
