@@ -83,7 +83,22 @@ struct trapframe {
   /* 280 */ uint64 t6;
 };
 
-enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+enum procstate { UNUSED, USED, ZOMBIE };
+enum threadstate { T_UNUSED, T_USED, T_SLEEPING, T_RUNNABLE, T_RUNNING, T_ZOMBIE };
+
+// Task 3.1 = defining thread struct
+struct thread {
+  struct spinlock lock;
+  enum threadstate state;      // Thread state
+  void *chan;                  // If non-zero, sleeping on chan
+  int killed;                  // If non-zero, have been killed
+  int xstate;                  // Exit status to be returned in kthread_join function
+  int tid;                     // Thread ID
+  struct proc *parent;         // Thread's Parent process
+  uint64 kstack;               // Virtual address of kernel stack
+  struct trapframe *trapframe; // data page for trampoline.S
+  struct context context;      // swtch() here to run thread
+};
 
 // Per-process state
 struct proc {
@@ -100,7 +115,7 @@ struct proc {
   struct proc *parent;         // Parent process
 
   // these are private to the process, so p->lock need not be held.
-  uint64 kstack;               // Virtual address of kernel stack
+  // uint64 kstack;               // Virtual address of kernel stack
   uint64 sz;                   // Size of process memory (bytes)
   pagetable_t pagetable;       // User page table
   // struct trapframe *trapframe; // TODO: i think we need to delete this. data page for trampoline.S
@@ -122,18 +137,4 @@ struct proc {
 struct sigaction {
   void (*sa_handler)(int);
   uint sigmask;
-};
-
-// Task 3.1 = defining thread struct
-struct thread {
-  struct spinlock lock;
-  enum procstate state;        // Thread state
-  void *chan;                  // If non-zero, sleeping on chan
-  int killed;                  // If non-zero, have been killed
-  int xstate;                  // Exit status to be returned in kthread_join function
-  int tid;                     // Thread ID
-  struct proc *parent;         // Thread's Parent process
-  uint64 kstack;               // Virtual address of kernel stack
-  struct trapframe *trapframe; // data page for trampoline.S
-  struct context context;      // swtch() here to run thread
 };
