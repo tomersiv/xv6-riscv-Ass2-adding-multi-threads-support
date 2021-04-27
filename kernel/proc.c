@@ -15,6 +15,9 @@ struct proc *initproc;
 int nextpid = 1;
 struct spinlock pid_lock;
 
+int nexttid = 1;
+struct spinlock tid_lock;
+
 extern void forkret(void);
 
 extern void *sigret_start(void);
@@ -56,6 +59,7 @@ void procinit(void)
   struct proc *p;
 
   initlock(&pid_lock, "nextpid");
+  initlock(&tid_lock, "nexttid");
   initlock(&wait_lock, "wait_lock");
   for (p = proc; p < &proc[NPROC]; p++)
   {
@@ -114,6 +118,18 @@ int allocpid()
   release(&pid_lock);
 
   return pid;
+}
+
+int alloctid()
+{
+  int tid;
+
+  acquire(&tid_lock);
+  tid = nexttid;
+  nexttid = nexttid + 1;
+  release(&tid_lock);
+
+  return tid;
 }
 
 // Look in the process table for an UNUSED proc.
@@ -310,15 +326,19 @@ int growproc(int n)
 // Sets up child kernel stack to return as if from fork() system call.
 int fork(void)
 {
-  int i, pid;
+  int i, pid, tid;
   struct proc *np;
+  struct thread *nt;
   struct proc *p = myproc();
+  struct thread *t = mythread();
 
   // Allocate process.
   if ((np = allocproc()) == 0)
   {
     return -1;
   }
+
+  nt = np->thread;
 
   // Copy user memory from parent to child.
   if (uvmcopy(p->pagetable, np->pagetable, p->sz) < 0)
@@ -330,10 +350,10 @@ int fork(void)
   np->sz = p->sz;
 
   // copy saved user registers.
-  *(np->trapframe) = *(p->trapframe);
+  *(nt->trapframe) = *(t->trapframe);
 
   // Cause fork to return 0 in the child.
-  np->trapframe->a0 = 0;
+  nt->trapframe->a0 = 0;
 
   // increment reference counts on open file descriptors.
   for (i = 0; i < NOFILE; i++)
@@ -360,7 +380,7 @@ int fork(void)
   release(&wait_lock);
 
   acquire(&np->lock);
-  np->state = RUNNABLE;
+  nt->state = RUNNABLE;
   release(&np->lock);
 
   return pid;
@@ -435,6 +455,7 @@ int wait(uint64 addr)
   struct proc *np;
   int havekids, pid;
   struct proc *p = myproc();
+
 
   acquire(&wait_lock);
 
@@ -613,17 +634,21 @@ void sleep(void *chan, struct spinlock *lk)
 void wakeup(void *chan)
 {
   struct proc *p;
+  struct thread *t;
 
   for (p = proc; p < &proc[NPROC]; p++)
   {
-    if (p != myproc())
+    for (t = p->thread; t < &p->thread[NTHREAD]; t++)
     {
-      acquire(&p->lock);
-      if (p->state == SLEEPING && p->chan == chan)
+      if (t != mythread())
       {
-        p->state = RUNNABLE;
+        acquire(&t->lock);
+        if (t->state == SLEEPING && t->chan == chan)
+        {
+          t->state = RUNNABLE;
+        }
+        release(&t->lock);
       }
-      release(&p->lock);
     }
   }
 }
@@ -642,7 +667,7 @@ int kill(int pid, int signum)
   for (p = proc; p < &proc[NPROC]; p++)
   {
     acquire(&p->lock);
-    if (p->pid == pid)
+    if (p->pid == pid && p->sig_handlers[signum] != SIG_IGN)
     {
       p->pending_sig = p->pending_sig | (1 << signum);
 
@@ -862,6 +887,7 @@ void handle_signal()
       }
       else if (p->sig_handlers[i] == (void *)SIG_IGN)
       {
+        // TODO: check if we need to continue; here because we dont want to clear the bit 
         // just clear the appropriate bit in p->pending_signal (at the end of this function)
       }
       else if (p->sig_handlers[i] == (void *)SIGKILL)
