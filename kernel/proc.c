@@ -482,7 +482,7 @@ int wait(uint64 addr)
 
           //   }
           // }
-          
+
           // Found one.
           pid = np->pid;
           if (addr != 0 && copyout(p->pagetable, addr, (char *)&np->xstate,
@@ -534,22 +534,29 @@ void scheduler(void)
 
     for (p = proc; p < &proc[NPROC]; p++)
     {
-      for (t = p->thread; t < &p->thread[NTHREAD]; t++)
-        acquire(&t->lock);
-      if (t->state == T_RUNNABLE)
+      acquire(&p->lock);
+      if (p->state == USED)
       {
-        // Switch to chosen process.  It is the process's job
-        // to release its lock and then reacquire it
-        // before jumping back to us.
-        t->state = T_RUNNING;
-        c->thread = t;
-        swtch(&c->context, &t->context);
+        for (t = p->thread; t < &p->thread[NTHREAD]; t++)
+        {
+          acquire(&t->lock);
+          if (t->state == T_RUNNABLE)
+          {
+            // Switch to chosen process.  It is the process's job
+            // to release its lock and then reacquire it
+            // before jumping back to us.
+            t->state = T_RUNNING;
+            c->thread = t;
+            swtch(&c->context, &t->context);
 
-        // Process is done running for now.
-        // It should have changed its p->state before coming back.
-        c->thread = 0;
+            // Process is done running for now.
+            // It should have changed its p->state before coming back.
+            c->thread = 0;
+          }
+          release(&t->lock);
+        }
       }
-      release(&t->lock);
+      release(&p->lock);
     }
   }
 }
@@ -676,6 +683,8 @@ int kill(int pid, int signum)
   }
 
   struct proc *p;
+  struct thread *t;
+  
   for (p = proc; p < &proc[NPROC]; p++)
   {
     acquire(&p->lock);
@@ -683,10 +692,29 @@ int kill(int pid, int signum)
     {
       p->pending_sig = p->pending_sig | (1 << signum);
 
-      if (signum == SIGKILL && p->state == SLEEPING)
+      if (signum == SIGKILL)
       {
-        // Wake process from sleep().
-        p->state = RUNNABLE;
+        int allThreadsSleeping = 1;
+        for (t = p->thread; t < &p->thread[NTHREAD]; t++){
+          acquire(&t->lock);
+          if (t->state != T_SLEEPING) {
+            allThreadsSleeping = 0;
+            break;
+          }
+          release(&t->lock);
+        }
+        
+        if (allThreadsSleeping) {
+          acquire(&t->lock);
+          t--;
+          // Wake process from sleep().
+          t->state = T_RUNNABLE;
+          release(&t->lock);
+        }
+        else
+        {
+          release(&t->lock);
+        }
       }
       release(&p->lock);
       return 0;
@@ -805,7 +833,9 @@ int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)
 void sigkill_handler()
 {
   struct proc *p = myproc();
+  acquire(&p->lock);
   p->killed = 1;
+  release(&p->lock);
 }
 
 // check if SIGCONT is pending with SIG_DFL as handler, and SIGCONT is not blocked
@@ -842,6 +872,7 @@ void sigstop_handler()
 {
   struct proc *p = myproc();
   int signum = -1;
+  acquire(&p->lock);
   while (!condition1() && ((signum = condition2()) == -1))
   {
     yield();
@@ -855,6 +886,7 @@ void sigstop_handler()
   {
     p->pending_sig &= ~(1 << signum);
   }
+  release(&p->lock);
 
   return;
 }
@@ -863,22 +895,28 @@ void sigret(void)
 {
   // restore process trapframe and signal mask
   struct proc *p = myproc();
-  copyin(p->pagetable, (char *)p->trapframe, (uint64)p->usertrap_backup, sizeof(struct trapframe));
+  struct thread *t = mythread();
+
+  acquire(&p->lock);
+  copyin(p->pagetable, (char *)t->trapframe, (uint64)p->usertrap_backup, sizeof(struct trapframe));
   p->sig_mask = p->mask_backup;
 
   // restore stack state to be the state before handeling the signals
-  p->trapframe->sp += sizeof(struct trapframe);
+  t->trapframe->sp += sizeof(struct trapframe);
   p->handling_usersignal = 0;
+  release(&p->lock);
 }
 
 // task 2.4
 void handle_signal()
 {
   struct proc *p = myproc();
+  struct thread *t = mythread();
 
   int i;
   for (i = 0; i < 32; i++)
   {
+    acquire(&p->lock);
     if ((p->pending_sig & (1 << i)) && (!p->handling_usersignal) && !((1 << i) & p->sig_mask)) // check if the signal is pending and if we are currently handling a signal
     {
       // handle signals according to signal handler type
@@ -925,20 +963,21 @@ void handle_signal()
         p->mask_backup = p->sig_mask;
 
         // backup trapframe
-        p->trapframe->sp -= sizeof(struct trapframe);
-        p->usertrap_backup = (struct trapframe *)(p->trapframe->sp);
-        copyout(p->pagetable, (uint64)p->usertrap_backup, (char *)p->trapframe, sizeof(struct trapframe));
+        t->trapframe->sp -= sizeof(struct trapframe);
+        p->usertrap_backup = (struct trapframe *)(t->trapframe->sp);
+        copyout(p->pagetable, (uint64)p->usertrap_backup, (char *)t->trapframe, sizeof(struct trapframe));
 
         // "inject" implicit call to sigret system call
         uint64 size = (uint64)&sigret_end - (uint64)&sigret_start;
-        p->trapframe->sp -= size;
-        copyout(p->pagetable, (uint64)p->trapframe->sp, (char *)&sigret_start, size);
-        p->trapframe->a0 = i;                // store signal number
-        p->trapframe->ra = p->trapframe->sp; // store sigret system call at the return address
+        t->trapframe->sp -= size;
+        copyout(p->pagetable, (uint64)t->trapframe->sp, (char *)&sigret_start, size);
+        t->trapframe->a0 = i;                // store signal number
+        t->trapframe->ra = t->trapframe->sp; // store sigret system call at the return address
 
-        p->trapframe->epc = (uint64)p->sig_handlers[i]; // program counter points to the user-space handler function
+        t->trapframe->epc = (uint64)p->sig_handlers[i]; // program counter points to the user-space handler function
       }
       p->pending_sig &= ~(1 << i);
     }
+    release(&p->lock);
   }
 }
