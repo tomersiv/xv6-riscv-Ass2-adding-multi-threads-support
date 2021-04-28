@@ -294,6 +294,7 @@ void userinit(void)
   p->thread[0].trapframe->sp = PGSIZE; // user stack pointer
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
+  safestrcpy(p->thread[0].name, "Nitzan Ya Gay", sizeof(p->thread[0].name));
   p->cwd = namei("/");
 
   p->thread[0].state = T_RUNNABLE;
@@ -364,6 +365,7 @@ int fork(void)
   np->cwd = idup(p->cwd);
 
   safestrcpy(np->name, p->name, sizeof(p->name));
+  safestrcpy(nt->name, t->name, sizeof(t->name));
 
   pid = np->pid;
 
@@ -980,4 +982,10 @@ void handle_signal()
     }
     release(&p->lock);
   }
+}
+
+// Task 3.2 - kthread_create syscall
+int 
+kthread_create(void (*start_func)(), void *stack){
+  
 }

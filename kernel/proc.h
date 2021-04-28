@@ -98,6 +98,7 @@ struct thread {
   uint64 kstack;               // Virtual address of kernel stack
   struct trapframe *trapframe; // data page for trampoline.S
   struct context context;      // swtch() here to run thread
+  char name[16];               // thread name (debugging)
 };
 
 // Per-process state

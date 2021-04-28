@@ -42,3 +42,5 @@ entry("sigprocmask");
 entry("sigaction");
 # task 2.1.5 - sigret system call
 entry("sigret");
+# task 3.2 - kthread_create system call
+entry("kthread_create");

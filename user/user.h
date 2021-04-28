@@ -30,6 +30,8 @@ int sigprocmask(int);
 int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact);
 // task 2.1.5 - sigret system call
 void sigret(void);
+// task 3.2 - kthread_create system call
+int kthread_create(void (*start_func)(),void *stack);
 
 // Task 2.1.4 - defining sigaction struct
 struct sigaction {

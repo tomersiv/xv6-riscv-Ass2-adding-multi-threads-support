@@ -116,6 +116,8 @@ void            sigret(void);
 void            swtch(struct context*, struct context*);
 // task 2.4 - signal handling function
 void            handle_signal(void);
+// task 3.2 - kthread_create system call
+int             kthread_create (void(*start_func) ( ), void *stack);
 
 // spinlock.c
 void            acquire(struct spinlock*);

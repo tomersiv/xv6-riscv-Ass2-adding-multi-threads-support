@@ -119,8 +119,20 @@ sys_sigaction(void){
   return sigaction(signum, act, oldact);
 }
 
+// task 2.1.5 - sigret system call
 uint64
 sys_sigret(void){
   sigret();
   return 0;
+}
+
+// 3.2 - kthread_create system call
+uint64
+sys_kthread_create(void){
+  void (*start_func)();
+  void *stack;
+  if (argaddr(0, (uint64 *)&start_func) < 0 || argaddr(1, (uint64 *)&stack) < 0){
+    return -1;
+  }
+  return kthread_create(start_func, stack);
 }

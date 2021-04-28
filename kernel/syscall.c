@@ -34,20 +34,20 @@ fetchstr(uint64 addr, char *buf, int max)
 static uint64
 argraw(int n)
 {
-  struct proc *p = myproc();
+  struct thread *t = thread();
   switch (n) {
   case 0:
-    return p->trapframe->a0;
+    return t->trapframe->a0;
   case 1:
-    return p->trapframe->a1;
+    return t->trapframe->a1;
   case 2:
-    return p->trapframe->a2;
+    return t->trapframe->a2;
   case 3:
-    return p->trapframe->a3;
+    return t->trapframe->a3;
   case 4:
-    return p->trapframe->a4;
+    return t->trapframe->a4;
   case 5:
-    return p->trapframe->a5;
+    return t->trapframe->a5;
   }
   panic("argraw");
   return -1;
@@ -114,6 +114,9 @@ extern uint64 sys_sigaction(void);
 // task 2.1.5 - sigret system call
 extern uint64 sys_sigret(void);
 
+// task 3.2 - kthread_create system call
+extern uint64 sys_kthread_create (void(*start_func) ( ), void *stack);
+
 static uint64 (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
 [SYS_exit]    sys_exit,
@@ -141,21 +144,23 @@ static uint64 (*syscalls[])(void) = {
 // Task 2.1.4 - sigaction system call
 [SYS_sigaction]   sys_sigaction,
 // task 2.1.5 - sigret system call
-[SYS_sigret]   sys_sigret
+[SYS_sigret]   sys_sigret,
+// task 3.2 - kthread_create system call
+[SYS_kthread_create]  kthread_create
 };
 
 void
 syscall(void)
 {
   int num;
-  struct proc *p = myproc();
+  struct thread *t = mythread();
 
-  num = p->trapframe->a7;
+  num = t->trapframe->a7;
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
-    p->trapframe->a0 = syscalls[num]();
+    t->trapframe->a0 = syscalls[num]();
   } else {
     printf("%d %s: unknown sys call %d\n",
-            p->pid, p->name, num);
-    p->trapframe->a0 = -1;
+            t->tid, t->name, num);
+    t->trapframe->a0 = -1;
   }
 }
