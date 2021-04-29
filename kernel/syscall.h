@@ -29,3 +29,5 @@
 #define SYS_sigret 24
 // task 3.2 - kthread_create system call
 #define SYS_kthread_create 25
+// task 3.2 - kthread_id system call
+#define SYS_kthread_id 26

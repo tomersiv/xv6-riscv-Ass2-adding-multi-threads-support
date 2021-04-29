@@ -44,3 +44,5 @@ entry("sigaction");
 entry("sigret");
 # task 3.2 - kthread_create system call
 entry("kthread_create");
+# task 3.2 - kthread_id
+entry("kthread_id");

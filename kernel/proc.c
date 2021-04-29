@@ -57,6 +57,7 @@ void proc_mapstacks(pagetable_t kpgtbl)
 void procinit(void)
 {
   struct proc *p;
+  struct thread *t;
 
   initlock(&pid_lock, "nextpid");
   initlock(&tid_lock, "nexttid");
@@ -65,6 +66,11 @@ void procinit(void)
   {
     initlock(&p->lock, "proc");
     p->thread[0].kstack = KSTACK((int)(p - proc)); //TODO: find the correct offset instead of p - proc
+
+    for (t = p->thread; t < &p->thread[NTHREAD]; t++){
+      initlock(&t->lock, "thread");
+      t->state = T_UNUSED;
+    }
   }
 }
 
@@ -606,7 +612,7 @@ void forkret(void)
   static int first = 1;
 
   // Still holding p->lock from scheduler.
-  release(&myproc()->lock); // TODO: check if we need to change myproc() to mythread()
+  release(&mythread()->lock);
 
   if (first)
   {
@@ -632,7 +638,7 @@ void sleep(void *chan, struct spinlock *lk)
   // guaranteed that we won't miss any wakeup
   // (wakeup locks p->lock),
   // so it's okay to release lk.
-
+  
   acquire(&t->lock); //DOC: sleeplock1
   release(lk);
 
@@ -984,8 +990,80 @@ void handle_signal()
   }
 }
 
+// Task 3.2 - the first scheduling of a thread created after kthread_create
+// will continue from userspace (with the epc set to start_func)
+void threadret(void)
+{
+  release(&mythread()->lock);
+  usertrapret();
+}
+
 // Task 3.2 - kthread_create syscall
 int 
 kthread_create(void (*start_func)(), void *stack){
+  struct proc *p = myproc();
+  struct thread *t;
+  
+  acquire(&p->lock);
+  for (t = p->thread; t < &p->thread[NTHREAD]; t++){
+    if (t->state == T_UNUSED) {
+      goto found;
+    }
+    else {
+      release(&t->lock);
+    }
+  }
+  return 0;
+
+  found:
+  acquire(&wait_lock); // TODO: check if needed!!
+  t->parent = p;
+  release(&wait_lock);
+
+  initlock(&t->lock, "thread");
+  acquire(&t->lock);
+  t->state = T_USED;
+
+  release(&p->lock);
+  
+  t->tid = alloctid();
+  t->chan = 0;
+  t->killed = 0;
+  if((t->kstack = kalloc() == 0))
+  {
+    freethread(t);
+    release(&t->lock);
+    return 0;
+  }
+
+  t->trapframe = (p->thread[0].trapframe + (int)(t - p->thread) * sizeof(struct trapframe));
+
+  // Set up new context to start executing at forkret,
+  // which returns to user space.
+  memset(&t->context, 0, sizeof(t->context));
+  t->context.ra = (uint64)threadret;
+  t->context.sp = t->kstack + PGSIZE;
+
+  t->trapframe->epc = (uint)start_func;
+  t->trapframe->sp = stack + MAX_STACK_SIZE;
+
+  acquire(&t->lock);
+  t->state = T_RUNNABLE;
+  release(&t->lock);
+  
+  return t->tid;
+}
+
+// task 3.2 - kthread_id system call
+int kthread_id(void){
+  struct thread *t = mythread();
+  acquire(&t->lock);
+  int tid = t->tid;
+  release(&t->lock);
+  return tid;
+}
+
+void kthread_exit(int *status)
+{
   
 }

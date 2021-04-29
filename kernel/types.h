@@ -15,3 +15,6 @@ typedef uint64 pde_t;
 #define SIGKILL 9
 #define SIGSTOP 17
 #define SIGCONT 19
+
+//task 3.2
+#define MAX_STACK_SIZE 4000

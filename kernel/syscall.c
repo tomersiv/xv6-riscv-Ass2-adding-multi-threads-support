@@ -117,6 +117,9 @@ extern uint64 sys_sigret(void);
 // task 3.2 - kthread_create system call
 extern uint64 sys_kthread_create (void(*start_func) ( ), void *stack);
 
+// task 3.2 - kthread_id system call
+extern uint64 sys_kthread_id(void);
+
 static uint64 (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
 [SYS_exit]    sys_exit,
@@ -146,7 +149,9 @@ static uint64 (*syscalls[])(void) = {
 // task 2.1.5 - sigret system call
 [SYS_sigret]   sys_sigret,
 // task 3.2 - kthread_create system call
-[SYS_kthread_create]  kthread_create
+[SYS_kthread_create]  kthread_create,
+// task 3.2 - kthread_id system call
+[SYS_kthread_id]  kthread_id 
 };
 
 void

@@ -118,6 +118,8 @@ void            swtch(struct context*, struct context*);
 void            handle_signal(void);
 // task 3.2 - kthread_create system call
 int             kthread_create (void(*start_func) ( ), void *stack);
+// task 3.2 - kthread_id system call
+int             kthread_id(void);
 
 // spinlock.c
 void            acquire(struct spinlock*);

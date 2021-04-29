@@ -136,3 +136,8 @@ sys_kthread_create(void){
   }
   return kthread_create(start_func, stack);
 }
+
+uint64
+sys_kthread_id(void){
+  return kthread_id();
+}
