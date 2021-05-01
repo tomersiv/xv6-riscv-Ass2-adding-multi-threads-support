@@ -120,6 +120,8 @@ void            handle_signal(void);
 int             kthread_create (void(*start_func) ( ), void *stack);
 // task 3.2 - kthread_id system call
 int             kthread_id(void);
+// task 3.2 - kthread_id system call
+int             kthread_join(int thread_id, int* status);
 
 // spinlock.c
 void            acquire(struct spinlock*);

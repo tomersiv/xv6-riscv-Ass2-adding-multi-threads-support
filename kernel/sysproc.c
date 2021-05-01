@@ -137,7 +137,21 @@ sys_kthread_create(void){
   return kthread_create(start_func, stack);
 }
 
+// 3.2 - kthread_id system call
 uint64
 sys_kthread_id(void){
   return kthread_id();
+}
+
+// 3.2 - kthread_join system call
+uint64
+sys_kthread_join(void)
+{
+  int thread_id;
+  int *status;
+
+  if (argint(0, &thread_id) < 1 || argaddr(1, (uint64 *)&status) < 0){
+    return -1;
+  }
+  return kthread_join(thread_id, status);
 }

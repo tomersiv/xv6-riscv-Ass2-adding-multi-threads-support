@@ -32,8 +32,10 @@ int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)
 void sigret(void);
 // task 3.2 - kthread_create system call
 int kthread_create(void (*start_func)(),void *stack);
-// task 3.2 - kthread_id
+// task 3.2 - kthread_id system call
 int kthread_id(void);
+// task 3.2 - kthread_join system call
+int kthread_join(int thread_id, int* status);
 
 // Task 2.1.4 - defining sigaction struct
 struct sigaction {

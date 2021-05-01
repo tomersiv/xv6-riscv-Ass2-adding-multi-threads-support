@@ -105,6 +105,7 @@ extern uint64 sys_wait(void);
 extern uint64 sys_write(void);
 extern uint64 sys_uptime(void);
 
+
 // Task 2.1.3 - sigprocmask system call
 extern uint64 sys_sigprocmask(void);
 
@@ -119,6 +120,9 @@ extern uint64 sys_kthread_create (void(*start_func) ( ), void *stack);
 
 // task 3.2 - kthread_id system call
 extern uint64 sys_kthread_id(void);
+
+// task 3.2 - kthread_join system call
+extern uint64 sys_kthread_join(void);
 
 static uint64 (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -151,7 +155,9 @@ static uint64 (*syscalls[])(void) = {
 // task 3.2 - kthread_create system call
 [SYS_kthread_create]  kthread_create,
 // task 3.2 - kthread_id system call
-[SYS_kthread_id]  kthread_id 
+[SYS_kthread_id]  kthread_id,
+// task 3.2 - kthread_join system call
+[SYS_kthread_join]  kthread_join
 };
 
 void

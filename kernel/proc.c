@@ -67,7 +67,8 @@ void procinit(void)
     initlock(&p->lock, "proc");
     p->thread[0].kstack = KSTACK((int)(p - proc)); //TODO: find the correct offset instead of p - proc
 
-    for (t = p->thread; t < &p->thread[NTHREAD]; t++){
+    for (t = p->thread; t < &p->thread[NTHREAD]; t++)
+    {
       initlock(&t->lock, "thread");
       t->state = T_UNUSED;
     }
@@ -638,7 +639,7 @@ void sleep(void *chan, struct spinlock *lk)
   // guaranteed that we won't miss any wakeup
   // (wakeup locks p->lock),
   // so it's okay to release lk.
-  
+
   acquire(&t->lock); //DOC: sleeplock1
   release(lk);
 
@@ -692,7 +693,7 @@ int kill(int pid, int signum)
 
   struct proc *p;
   struct thread *t;
-  
+
   for (p = proc; p < &proc[NPROC]; p++)
   {
     acquire(&p->lock);
@@ -703,16 +704,19 @@ int kill(int pid, int signum)
       if (signum == SIGKILL)
       {
         int allThreadsSleeping = 1;
-        for (t = p->thread; t < &p->thread[NTHREAD]; t++){
+        for (t = p->thread; t < &p->thread[NTHREAD]; t++)
+        {
           acquire(&t->lock);
-          if (t->state != T_SLEEPING) {
+          if (t->state != T_SLEEPING)
+          {
             allThreadsSleeping = 0;
             break;
           }
           release(&t->lock);
         }
-        
-        if (allThreadsSleeping) {
+
+        if (allThreadsSleeping)
+        {
           acquire(&t->lock);
           t--;
           // Wake process from sleep().
@@ -999,23 +1003,23 @@ void threadret(void)
 }
 
 // Task 3.2 - kthread_create syscall
-int 
-kthread_create(void (*start_func)(), void *stack){
+int kthread_create(void (*start_func)(), void *stack)
+{
   struct proc *p = myproc();
   struct thread *t;
-  
+
   acquire(&p->lock);
-  for (t = p->thread; t < &p->thread[NTHREAD]; t++){
-    if (t->state == T_UNUSED) {
+  for (t = p->thread; t < &p->thread[NTHREAD]; t++)
+  {
+    if (t->state == T_UNUSED)
+    {
       goto found;
     }
-    else {
-      release(&t->lock);
-    }
   }
+  release(&p->lock);
   return 0;
 
-  found:
+found:
   acquire(&wait_lock); // TODO: check if needed!!
   t->parent = p;
   release(&wait_lock);
@@ -1025,11 +1029,11 @@ kthread_create(void (*start_func)(), void *stack){
   t->state = T_USED;
 
   release(&p->lock);
-  
+
   t->tid = alloctid();
   t->chan = 0;
   t->killed = 0;
-  if((t->kstack = kalloc() == 0))
+  if ((t->kstack = kalloc() == 0))
   {
     freethread(t);
     release(&t->lock);
@@ -1047,15 +1051,15 @@ kthread_create(void (*start_func)(), void *stack){
   t->trapframe->epc = (uint)start_func;
   t->trapframe->sp = stack + MAX_STACK_SIZE;
 
-  acquire(&t->lock);
   t->state = T_RUNNABLE;
   release(&t->lock);
-  
+
   return t->tid;
 }
 
 // task 3.2 - kthread_id system call
-int kthread_id(void){
+int kthread_id(void)
+{
   struct thread *t = mythread();
   acquire(&t->lock);
   int tid = t->tid;
@@ -1063,7 +1067,93 @@ int kthread_id(void){
   return tid;
 }
 
+// TODO: complete after kthread_join
 void kthread_exit(int *status)
 {
-  
+  struct proc *p = myproc();
+  struct thread *curr_thread = mythread();
+  struct thread *t;
+
+  for (t = p->thread; t < &p->thread[NTHREAD]; t++)
+  {
+    if (t != curr_thread && t->state != T_UNUSED && t->state != T_ZOMBIE)
+    {
+      t->state = T_ZOMBIE;
+      sched();
+    }
+    else
+    {
+      exit(0);
+    }
+  }
+
+  acquire(&wait_lock);
+
+  // Give any children to init.
+  reparent(p);
+
+  // Parent might be sleeping in wait().
+  wakeup(p->parent);
+
+  acquire(&p->lock);
+
+  p->xstate = status;
+  p->state = ZOMBIE;
+
+  release(&wait_lock);
+
+  // Jump into the scheduler, never to return.
+  sched();
+  panic("zombie exit");
+}
+
+int kthread_join(int thread_id, int *status)
+{
+  int found = 0;
+  struct proc *p = myproc();
+  struct thread *t;
+
+  acquire(&wait_lock);
+  for (;;)
+  {
+    for (t = p->thread; t < &p->thread[NTHREAD]; t++)
+    {
+      if (t->tid == thread_id)
+      {
+        // make sure that t isn't still in exit() or swtch().
+        acquire(&t->lock);
+        found = 1;
+        if (t->state == T_ZOMBIE)
+        {
+          if (status != 0 && copyout(p->pagetable, status, (char *)&t->xstate,
+                                     sizeof(t->xstate)) < 0)
+          {
+            release(&t->lock);
+            release(&wait_lock);
+            return -1;
+          }
+          freethread(t);
+          release(&t->lock);
+          release(&wait_lock);
+          return 0;
+        }
+        else if (t->state != T_UNUSED)
+        {
+          release(&t->lock);
+          sleep(t, &wait_lock); // TODO: maybe need to define a new lock
+        }
+        else if(t->killed) // TODO: find the right place for this check
+        {
+          release(&t->lock);
+          release(&wait_lock);
+          return -1;
+        }
+      }
+    }
+    if (!found)
+    {
+      release(&wait_lock);
+      return -1;
+    }
+  }
 }
