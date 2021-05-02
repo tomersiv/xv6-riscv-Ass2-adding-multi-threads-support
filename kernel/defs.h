@@ -120,8 +120,17 @@ void            handle_signal(void);
 int             kthread_create (void(*start_func) ( ), void *stack);
 // task 3.2 - kthread_id system call
 int             kthread_id(void);
-// task 3.2 - kthread_id system call
+// task 3.2 - kthread_join system call
 int             kthread_join(int thread_id, int* status);
+// task 3.2 - kthread_exit system call
+void             kthread_exit(int status);
+// task 3.2 - kthread_free
+void kthread_free(struct thread *t);
+// task 3.2 - mythread
+struct thread * mythread(void);
+// task 3.2 - killThreadsExceptCurrent: kills all threads in a 
+// process except the one currently running the fucntion
+void killThreadsExceptCurrent(void);
 
 // spinlock.c
 void            acquire(struct spinlock*);

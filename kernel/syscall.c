@@ -124,6 +124,9 @@ extern uint64 sys_kthread_id(void);
 // task 3.2 - kthread_join system call
 extern uint64 sys_kthread_join(void);
 
+// task 3.2 - kthread_exit system call
+extern uint64 sys_kthread_exit(void);
+
 static uint64 (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
 [SYS_exit]    sys_exit,
@@ -157,7 +160,9 @@ static uint64 (*syscalls[])(void) = {
 // task 3.2 - kthread_id system call
 [SYS_kthread_id]  kthread_id,
 // task 3.2 - kthread_join system call
-[SYS_kthread_join]  kthread_join
+[SYS_kthread_join]  kthread_join,
+// task 3.2 - kthread_exit system call
+[SYS_kthread_exit]  kthread_exit
 };
 
 void

@@ -1,5 +1,10 @@
 {
     "files.associations": {
-        "typeinfo": "c"
+        "typeinfo": "c",
+        "param.h": "c",
+        "memlayout.h": "c",
+        "spinlock.h": "c",
+        "proc.h": "c",
+        "defs.h": "c"
     }
 }

@@ -31,5 +31,7 @@
 #define SYS_kthread_create 25
 // task 3.2 - kthread_id system call
 #define SYS_kthread_id 26
-// task 3.2 - kthread_id system call
+// task 3.2 - kthread_join system call
 #define SYS_kthread_join 27
+// task 3.2 - kthread_exit system call
+#define SYS_kthread_exit 28

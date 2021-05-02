@@ -36,6 +36,8 @@ int kthread_create(void (*start_func)(),void *stack);
 int kthread_id(void);
 // task 3.2 - kthread_join system call
 int kthread_join(int thread_id, int* status);
+// task 3.2 - kthread_exit system call
+void kthread_exit(int status);
 
 // Task 2.1.4 - defining sigaction struct
 struct sigaction {

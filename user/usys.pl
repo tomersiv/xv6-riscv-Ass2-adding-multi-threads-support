@@ -48,3 +48,5 @@ entry("kthread_create");
 entry("kthread_id");
 # task 3.2 - kthread_join system call
 entry("kthread_join");
+# task 3.2 - kthread_exit system call
+entry("kthread_exit");

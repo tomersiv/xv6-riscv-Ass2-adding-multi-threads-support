@@ -155,3 +155,14 @@ sys_kthread_join(void)
   }
   return kthread_join(thread_id, status);
 }
+
+// 3.2 - kthread_exit system_call
+uint64
+sys_kthread_exit(void){
+  int status;
+
+  if (argint(0, &status) < 0){
+    return -1;
+  }
+  return kthread_exit(status);
+}
