@@ -34,7 +34,7 @@ fetchstr(uint64 addr, char *buf, int max)
 static uint64
 argraw(int n)
 {
-  struct thread *t = thread();
+  struct thread *t = mythread();
   switch (n) {
   case 0:
     return t->trapframe->a0;
@@ -116,7 +116,7 @@ extern uint64 sys_sigaction(void);
 extern uint64 sys_sigret(void);
 
 // task 3.2 - kthread_create system call
-extern uint64 sys_kthread_create (void(*start_func) ( ), void *stack);
+extern uint64 sys_kthread_create(void);
 
 // task 3.2 - kthread_id system call
 extern uint64 sys_kthread_id(void);
@@ -156,13 +156,13 @@ static uint64 (*syscalls[])(void) = {
 // task 2.1.5 - sigret system call
 [SYS_sigret]   sys_sigret,
 // task 3.2 - kthread_create system call
-[SYS_kthread_create]  kthread_create,
+[SYS_kthread_create]  sys_kthread_create,
 // task 3.2 - kthread_id system call
-[SYS_kthread_id]  kthread_id,
+[SYS_kthread_id]  sys_kthread_id,
 // task 3.2 - kthread_join system call
-[SYS_kthread_join]  kthread_join,
+[SYS_kthread_join]  sys_kthread_join,
 // task 3.2 - kthread_exit system call
-[SYS_kthread_exit]  kthread_exit
+[SYS_kthread_exit]  sys_kthread_exit
 };
 
 void

@@ -217,9 +217,16 @@ static void
 freeproc(struct proc *p)
 {
   struct thread *t;
-  struct thread *curr_thread = mythread();
-  struct proc *p = myproc();
-  kthread_free(curr_thread);
+
+  for (t = p->thread; t < &p->thread[NTHREAD]; t++) {
+    if (t->state == T_ZOMBIE){
+      kthread_free(t);
+    }
+  }
+  if ((p->thread[0].kstack = kalloc() == 0))
+  {
+    panic("kalloc failed in freeproc");
+  }
 
   if (p->pagetable)
     proc_freepagetable(p->pagetable, p->sz);
@@ -342,7 +349,7 @@ int growproc(int n)
 // Sets up child kernel stack to return as if from fork() system call.
 int fork(void)
 {
-  int i, pid, tid;
+  int i, pid;
   struct proc *np;
   struct thread *nt;
   struct proc *p = myproc();
@@ -425,6 +432,7 @@ void reparent(struct proc *p)
 void exit(int status)
 {
   struct proc *p = myproc();
+  struct thread *t = mythread();
   
 
   if (p == initproc)
@@ -460,6 +468,7 @@ void exit(int status)
 
   p->xstate = status;
   p->state = ZOMBIE;
+  t->state = T_ZOMBIE;
 
   release(&wait_lock);
   
@@ -473,7 +482,6 @@ void exit(int status)
 int wait(uint64 addr)
 {
   struct proc *np;
-  struct thread *t;
   int havekids, pid;
   struct proc *p = myproc();
 
@@ -710,7 +718,7 @@ int kill(int pid, int signum)
   for (p = proc; p < &proc[NPROC]; p++)
   {
     acquire(&p->lock);
-    if (p->pid == pid && p->sig_handlers[signum] != SIG_IGN)
+    if (p->pid == pid && p->sig_handlers[signum] != (void *)SIG_IGN)
     {
       p->pending_sig = p->pending_sig | (1 << signum);
 
@@ -1061,8 +1069,8 @@ found:
   t->context.ra = (uint64)threadret;
   t->context.sp = t->kstack + PGSIZE;
 
-  t->trapframe->epc = (uint)start_func;
-  t->trapframe->sp = stack + MAX_STACK_SIZE;
+  t->trapframe->epc = (uint64)start_func;
+  t->trapframe->sp = (uint64)stack + MAX_STACK_SIZE;
 
   t->state = T_RUNNABLE;
   release(&t->lock);
@@ -1136,7 +1144,7 @@ int kthread_join(int thread_id, int *status)
         }
         else if (t->state == T_ZOMBIE)
         {
-          if (status != 0 && copyout(p->pagetable, status, (char *)&t->xstate,
+          if (status != 0 && copyout(p->pagetable, (uint64)status, (char *)&t->xstate,
                                      sizeof(t->xstate)) < 0)
           {
             release(&t->lock);

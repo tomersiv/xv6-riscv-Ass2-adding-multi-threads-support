@@ -164,5 +164,6 @@ sys_kthread_exit(void){
   if (argint(0, &status) < 0){
     return -1;
   }
-  return kthread_exit(status);
+  kthread_exit(status);
+  return 0;
 }

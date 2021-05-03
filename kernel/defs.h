@@ -9,6 +9,7 @@ struct sleeplock;
 struct stat;
 struct superblock;
 struct sigaction;
+struct thread;
 
 // bio.c
 void            binit(void);
@@ -125,7 +126,7 @@ int             kthread_join(int thread_id, int* status);
 // task 3.2 - kthread_exit system call
 void             kthread_exit(int status);
 // task 3.2 - kthread_free
-void kthread_free(struct thread *t);
+void             kthread_free(struct thread*);
 // task 3.2 - mythread
 struct thread * mythread(void);
 // task 3.2 - killThreadsExceptCurrent: kills all threads in a 
