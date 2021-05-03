@@ -23,6 +23,7 @@ void thread_test(){
     int status;
     void* stack = malloc(MAX_STACK_SIZE);
     tid = kthread_create(test_thread, stack);
+    printf("Finished creating threads\n");
     kthread_join(tid,&status);
 
     tid = kthread_id();

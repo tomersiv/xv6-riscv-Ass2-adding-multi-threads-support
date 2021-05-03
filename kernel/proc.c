@@ -565,10 +565,11 @@ void scheduler(void)
 
     for (p = proc; p < &proc[NPROC]; p++)
     {
-      acquire(&p->lock);
+      // printf("thread %d in scheduler\n", mythread()->tid);
+      // acquire(&p->lock);
       if (p->state == USED)
       {
-        release(&p->lock);
+        // release(&p->lock);
         for (t = p->thread; t < &p->thread[NTHREAD]; t++)
         {
           acquire(&t->lock);
@@ -592,10 +593,10 @@ void scheduler(void)
           release(&t->lock);
         }
       }
-      else
-      {
-        release(&p->lock);
-      }
+      // else
+      // {
+        // release(&p->lock);
+      // }
     }
   }
 }
@@ -1069,7 +1070,7 @@ found:
     release(&t->lock);
     return 0;
   }
-
+  printf("starting to set trapframe for thread: %d\n", t->tid);
   t->trapframe = (p->thread[0].trapframe + (int)(t - p->thread) * sizeof(struct trapframe));
 
   // Set up new context to start executing at forkret,
@@ -1078,11 +1079,15 @@ found:
   t->context.ra = (uint64)threadret;
   t->context.sp = t->kstack + PGSIZE;
 
+  printf("finished setting context for thread: %d\n", t->tid);
+
   t->trapframe->epc = (uint64)start_func;
   t->trapframe->sp = (uint64)stack + MAX_STACK_SIZE;
 
   t->state = T_RUNNABLE;
+  printf("finished creating thread: %d\n", t->tid);
   release(&t->lock);
+  printf("released thread's lock: %d\n", t->tid);
 
   return t->tid;
 }
@@ -1142,6 +1147,7 @@ int kthread_join(int thread_id, int *status)
     {
       if (t->tid == thread_id)
       {
+        printf("entered join");
         // make sure that t isn't still in exit() or swtch().
         acquire(&t->lock);
         found = 1;
