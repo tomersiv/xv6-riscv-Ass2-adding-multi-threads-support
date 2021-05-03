@@ -10,7 +10,7 @@
 
 
 #include "kernel/spinlock.h"  // NEW INCLUDE FOR ASS2
-#include "Csemaphore.h"   // NEW INCLUDE FOR ASS 2
+//#include "Csemaphore.h"   // NEW INCLUDE FOR ASS 2
 #include "kernel/proc.h"         // NEW INCLUDE FOR ASS 2, has all the signal definitions and sigaction definition.  Alternatively, copy the relevant things into user.h and include only it, and then no need to include spinlock.h .
 
 
@@ -63,7 +63,7 @@ void signal_test(char *s){
 void thread_test(char *s){
     int tid;
     int status;
-    void* stack = malloc(STACK_SIZE);
+    void* stack = malloc(MAX_STACK_SIZE);
     tid = kthread_create(test_thread, stack);
     kthread_join(tid,&status);
 
@@ -73,59 +73,59 @@ void thread_test(char *s){
 }
 
 
-void bsem_test(char *s){
-    int pid;
-    int bid = bsem_alloc();
-    bsem_down(bid);
-    printf("1. Parent downing semaphore\n");
-    if((pid = fork()) == 0){
-        printf("2. Child downing semaphore\n");
-        bsem_down(bid);
-        printf("4. Child woke up\n");
-        exit(0);
-    }
-    sleep(5);
-    printf("3. Let the child wait on the semaphore...\n");
-    sleep(10);
-    bsem_up(bid);
+// void bsem_test(char *s){
+//     int pid;
+//     int bid = bsem_alloc();
+//     bsem_down(bid);
+//     printf("1. Parent downing semaphore\n");
+//     if((pid = fork()) == 0){
+//         printf("2. Child downing semaphore\n");
+//         bsem_down(bid);
+//         printf("4. Child woke up\n");
+//         exit(0);
+//     }
+//     sleep(5);
+//     printf("3. Let the child wait on the semaphore...\n");
+//     sleep(10);
+//     bsem_up(bid);
 
-    bsem_free(bid);
-    wait(&pid);
+//     bsem_free(bid);
+//     wait(&pid);
 
-    printf("Finished bsem test, make sure that the order of the prints is alright. Meaning (1...2...3...4)\n");
-}
+//     printf("Finished bsem test, make sure that the order of the prints is alright. Meaning (1...2...3...4)\n");
+// }
 
 
-void Csem_test(char *s){
-	struct counting_semaphore csem;
-    int retval;
-    int pid;
+// void Csem_test(char *s){
+// 	struct counting_semaphore csem;
+//     int retval;
+//     int pid;
     
     
-    retval = csem_alloc(&csem,1);
-    if(retval==-1)
-    {
-		printf("failed csem alloc");
-		exit(-1);
-	}
-    csem_down(&csem);
-    printf("1. Parent downing semaphore\n");
-    if((pid = fork()) == 0){
-        printf("2. Child downing semaphore\n");
-        csem_down(&csem);
-        printf("4. Child woke up\n");
-        exit(0);
-    }
-    sleep(5);
-    printf("3. Let the child wait on the semaphore...\n");
-    sleep(10);
-    csem_up(&csem);
+//     retval = csem_alloc(&csem,1);
+//     if(retval==-1)
+//     {
+// 		printf("failed csem alloc");
+// 		exit(-1);
+// 	}
+//     csem_down(&csem);
+//     printf("1. Parent downing semaphore\n");
+//     if((pid = fork()) == 0){
+//         printf("2. Child downing semaphore\n");
+//         csem_down(&csem);
+//         printf("4. Child woke up\n");
+//         exit(0);
+//     }
+//     sleep(5);
+//     printf("3. Let the child wait on the semaphore...\n");
+//     sleep(10);
+//     csem_up(&csem);
 
-    csem_free(&csem);
-    wait(&pid);
+//     csem_free(&csem);
+//     wait(&pid);
 
-    printf("Finished bsem test, make sure that the order of the prints is alright. Meaning (1...2...3...4)\n");
-}
+//     printf("Finished bsem test, make sure that the order of the prints is alright. Meaning (1...2...3...4)\n");
+// }
 
 
 
@@ -2880,10 +2880,10 @@ main(int argc, char *argv[])
     char *s;
   } tests[] = {
 	  //ASS 2 Compilation tests:
-	  {signal_test,"signal_test"},
+	  // {signal_test,"signal_test"},
 	  {thread_test,"thread_test"},
-	  {bsem_test,"bsem_test"},
-	  {Csem_test,"Csem_test"},
+	  // {bsem_test,"bsem_test"},
+	  // {Csem_test,"Csem_test"},
 	  
 // ASS 1 tests
 //	{stracetest,"stracetest"},    //18 ticks, need to compare inputs

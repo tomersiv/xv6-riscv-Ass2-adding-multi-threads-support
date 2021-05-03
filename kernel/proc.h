@@ -23,6 +23,7 @@ struct context {
 
 // Per-CPU state.
 struct cpu {
+  struct proc *proc;          // The process running on this cpu, or null.
   struct thread *thread;      // The thread running on this cpu, or null.
   struct context context;     // swtch() here to enter scheduler().
   int noff;                   // Depth of push_off() nesting.
@@ -135,7 +136,7 @@ struct proc {
 };
 
 // Task 2.1.4 - defining sigaction struct
-struct sigaction {
-  void (*sa_handler)(int);
-  uint sigmask;
-};
+// struct sigaction {
+//   void (*sa_handler)(int);
+//   uint sigmask;
+// };

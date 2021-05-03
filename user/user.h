@@ -39,12 +39,6 @@ int kthread_join(int thread_id, int* status);
 // task 3.2 - kthread_exit system call
 void kthread_exit(int status);
 
-// Task 2.1.4 - defining sigaction struct
-struct sigaction {
-  void (*sa_handler)(int);
-  uint sigmask;
-};
-
 // ulib.c
 int stat(const char*, struct stat*);
 char* strcpy(char*, const char*);
@@ -61,3 +55,9 @@ void free(void*);
 int atoi(const char*);
 int memcmp(const void *, const void *, uint);
 void *memcpy(void *, const void *, uint);
+
+// Task 2.1.4 - defining sigaction struct
+// struct sigaction {
+//   void (*sa_handler)(int);
+//   uint sigmask;
+// };

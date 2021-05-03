@@ -18,3 +18,9 @@ typedef uint64 pde_t;
 
 //task 3.2
 #define MAX_STACK_SIZE 4000
+
+// TODO: check if this is the right place
+struct sigaction {
+  void (*sa_handler)(int);
+  uint sigmask;
+};

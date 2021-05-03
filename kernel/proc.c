@@ -100,7 +100,11 @@ myproc(void)
 {
   push_off();
   struct cpu *c = mycpu();
-  struct proc *p = c->thread->parent;
+  // struct proc *p = c->thread->parent;
+  
+  // try to fix kerneltrap
+  struct proc *p = c->proc;
+
   pop_off();
   return p;
 }
@@ -167,7 +171,7 @@ found:
   p->state = USED;
   p->thread[0].tid = alloctid();
   p->thread[0].state = USED;
-
+  p->thread[0].parent = p; 
   // Allocate a trapframe page.
   if ((p->thread[0].trapframe = (struct trapframe *)kalloc()) == 0)
   {
@@ -223,9 +227,10 @@ freeproc(struct proc *p)
       kthread_free(t);
     }
   }
-  if ((p->thread[0].kstack = kalloc() == 0))
+
+  if(p->thread[0].trapframe)
   {
-    panic("kalloc failed in freeproc");
+    kfree(p->thread[0].trapframe);
   }
 
   if (p->pagetable)
@@ -326,6 +331,7 @@ void userinit(void)
 // Return 0 on success, -1 on failure.
 int growproc(int n)
 {
+  //TODO: need to lock this function somehow
   uint sz;
   struct proc *p = myproc();
 
@@ -463,8 +469,7 @@ void exit(int status)
 
   // Parent might be sleeping in wait().
   wakeup(p->parent);
-
-  acquire(&p->lock);
+  acquire(&t->lock);
 
   p->xstate = status;
   p->state = ZOMBIE;
@@ -574,6 +579,10 @@ void scheduler(void)
             // before jumping back to us.
             t->state = T_RUNNING;
             c->thread = t;
+            
+            // try to fix kernel trap 
+            c->proc = p; 
+            
             swtch(&c->context, &t->context);
 
             // Process is done running for now.
@@ -1173,7 +1182,7 @@ int kthread_join(int thread_id, int *status)
 
 void kthread_free(struct thread *t)
 {
-  if (t->kstack)
+  if (t->kstack && t != t->parent->thread)
   {
     kfree((void *)t->kstack);
   }
