@@ -613,8 +613,10 @@ void sched(void)
   int intena;
   struct thread *t = mythread();
 
-  if (!holding(&t->lock))
-    panic("sched p->lock");
+  if (!holding(&t->lock)) {
+    printf("panic in thread %d\n", t->tid);
+    panic("sched t->lock");
+  }
   if (mycpu()->noff != 1)
     panic("sched locks");
   if (t->state == T_RUNNING)
@@ -1070,8 +1072,8 @@ found:
     release(&t->lock);
     return 0;
   }
-  printf("starting to set trapframe for thread: %d\n", t->tid);
-  t->trapframe = (p->thread[0].trapframe + (int)(t - p->thread) * sizeof(struct trapframe));
+  // t->trapframe = (p->thread[0].trapframe + (int)(t - p->thread) * sizeof(struct trapframe)); // TODO: check this!!
+  t->trapframe = mythread()->trapframe;
 
   // Set up new context to start executing at forkret,
   // which returns to user space.
@@ -1104,22 +1106,27 @@ int kthread_id(void)
 
 void kthread_exit(int status)
 {
+  printf("entered exit\n");
   struct proc *p = myproc();
   struct thread *curr_thread = mythread();
   struct thread *t;
 
-  acquire(&p->lock);
+  // acquire(&p->lock);
+  printf("acquired p->lock\n");
   for (t = p->thread; t < &p->thread[NTHREAD]; t++)
   {
     if (t != curr_thread)
     {
-      acquire(&t->lock);
+      printf("acquired t->lock\n");
       
       // check if thread is not the last thread alive
       if (t->state != T_UNUSED && t->state != T_ZOMBIE) 
       {
         acquire(&wait_lock);
+        printf("acquired wait_lock\n");
         wakeup(curr_thread);
+        acquire(&curr_thread->lock);
+        printf("passed wakeup\n");
         curr_thread->xstate = status;
         curr_thread->state = T_ZOMBIE;
         release(&wait_lock);
@@ -1127,7 +1134,6 @@ void kthread_exit(int status)
         sched();
         panic("zombie thread exit");
       }
-      release(&t->lock);
     }
   }
   release(&p->lock);
@@ -1136,6 +1142,7 @@ void kthread_exit(int status)
 
 int kthread_join(int thread_id, int *status)
 {
+  printf("entered join");
   int found = 0;
   struct proc *p = myproc();
   struct thread *t;
@@ -1147,7 +1154,6 @@ int kthread_join(int thread_id, int *status)
     {
       if (t->tid == thread_id)
       {
-        printf("entered join");
         // make sure that t isn't still in exit() or swtch().
         acquire(&t->lock);
         found = 1;
