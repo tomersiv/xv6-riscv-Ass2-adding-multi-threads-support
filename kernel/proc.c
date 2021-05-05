@@ -335,6 +335,9 @@ int growproc(int n)
   uint sz;
   struct proc *p = myproc();
 
+  // task 3.1
+  acquire(&p->lock);
+
   sz = p->sz;
   if (n > 0)
   {
@@ -348,6 +351,7 @@ int growproc(int n)
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
   p->sz = sz;
+  release(&p->lock);
   return 0;
 }
 
@@ -1111,31 +1115,33 @@ void kthread_exit(int status)
   struct thread *curr_thread = mythread();
   struct thread *t;
 
-  // acquire(&p->lock);
+  acquire(&wait_lock);
+  acquire(&curr_thread->lock);
+  wakeup(curr_thread);
+  release(&wait_lock);
+
+  acquire(&p->lock);
   printf("acquired p->lock\n");
   for (t = p->thread; t < &p->thread[NTHREAD]; t++)
   {
     if (t != curr_thread)
     {
+      acquire(&t->lock);
       printf("acquired t->lock\n");
-      
       // check if thread is not the last thread alive
       if (t->state != T_UNUSED && t->state != T_ZOMBIE) 
       {
-        acquire(&wait_lock);
-        printf("acquired wait_lock\n");
-        wakeup(curr_thread);
-        acquire(&curr_thread->lock);
-        printf("passed wakeup\n");
         curr_thread->xstate = status;
         curr_thread->state = T_ZOMBIE;
-        release(&wait_lock);
         release(&p->lock);
+        release(&t->lock);
         sched();
         panic("zombie thread exit");
       }
+      release(&t->lock);
     }
   }
+  release(&curr_thread->lock);
   release(&p->lock);
   exit(0); // only one thread currently runnning - terminates the whole process
 }
