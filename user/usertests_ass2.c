@@ -36,10 +36,10 @@ void test_handler(int signum){
     printf("Received sigtest\n");
 }
 
-void test_thread(){
-    printf("Thread is now running\n");
-    kthread_exit(0);
-}
+// void test_thread(){
+//     printf("Thread is now running\n");
+//     kthread_exit(0);
+// }
 
 void signal_test(char *s){
     int pid;
@@ -60,17 +60,17 @@ void signal_test(char *s){
     printf("Finished testing signals\n");
 }
 
-void thread_test(char *s){
-    int tid;
-    int status;
-    void* stack = malloc(MAX_STACK_SIZE);
-    tid = kthread_create(test_thread, stack);
-    kthread_join(tid,&status);
+// void thread_test(char *s){
+//     int tid;
+//     int status;
+//     void* stack = malloc(STACK_SIZE);
+//     tid = kthread_create(test_thread, stack);
+//     kthread_join(tid,&status);
 
-    tid = kthread_id();
-    free(stack);
-    printf("Finished testing threads, main thread id: %d, %d\n", tid,status);
-}
+//     tid = kthread_id();
+//     free(stack);
+//     printf("Finished testing threads, main thread id: %d, %d\n", tid,status);
+// }
 
 
 // void bsem_test(char *s){
@@ -2880,8 +2880,8 @@ main(int argc, char *argv[])
     char *s;
   } tests[] = {
 	  //ASS 2 Compilation tests:
-	  // {signal_test,"signal_test"},
-	  {thread_test,"thread_test"},
+	  {signal_test,"signal_test"},
+	  // {thread_test,"thread_test"},
 	  // {bsem_test,"bsem_test"},
 	  // {Csem_test,"Csem_test"},
 	  
