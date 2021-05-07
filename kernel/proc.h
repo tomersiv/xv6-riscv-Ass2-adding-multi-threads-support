@@ -118,10 +118,10 @@ struct proc {
 };
 
 // Task 2.1.4 - defining sigaction struct
-struct sigaction {
-  void (*sa_handler)(int);
-  uint sigmask;
-};
+// struct sigaction {
+//   void (*sa_handler)(int);
+//   uint sigmask;
+// };
 
 // Task 3.1 = defining thread struct
 struct thread {

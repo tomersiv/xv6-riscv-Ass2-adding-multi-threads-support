@@ -15,3 +15,8 @@ typedef uint64 pde_t;
 #define SIGKILL 9
 #define SIGSTOP 17
 #define SIGCONT 19
+
+struct sigaction {
+  void (*sa_handler)(int);
+  uint sigmask;
+};

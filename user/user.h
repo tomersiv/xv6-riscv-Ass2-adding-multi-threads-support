@@ -32,10 +32,10 @@ int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)
 void sigret(void);
 
 // Task 2.1.4 - defining sigaction struct
-struct sigaction {
-  void (*sa_handler)(int);
-  uint sigmask;
-};
+// struct sigaction {
+//   void (*sa_handler)(int);
+//   uint sigmask;
+// };
 
 // ulib.c
 int stat(const char*, struct stat*);
