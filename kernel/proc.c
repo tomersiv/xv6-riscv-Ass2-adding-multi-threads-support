@@ -42,14 +42,18 @@ struct spinlock wait_lock;
 void proc_mapstacks(pagetable_t kpgtbl)
 {
   struct proc *p;
+  struct thread *t;
 
   for (p = proc; p < &proc[NPROC]; p++)
   {
-    char *pa = kalloc();
-    if (pa == 0)
-      panic("kalloc");
-    uint64 va = KSTACK((int)(p - proc));
-    kvmmap(kpgtbl, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
+    for (t = p->thread; t < &p->thread[NTHREAD]; t++)
+    {
+      char *ta = kalloc();
+      if (ta == 0)
+        panic("kalloc");
+      uint64 va = KSTACK(NTHREAD * (int)(p - proc) + (int)(t - p->thread));// TODO: change this!!!
+      kvmmap(kpgtbl, va, (uint64)ta, PGSIZE, PTE_R | PTE_W);
+    }
   }
 }
 
@@ -65,12 +69,10 @@ void procinit(void)
   for (p = proc; p < &proc[NPROC]; p++)
   {
     initlock(&p->lock, "proc");
-    p->thread[0].kstack = KSTACK((int)(p - proc));
-
     for (t = p->thread; t < &p->thread[NTHREAD]; t++)
     {
       initlock(&t->lock, "thread");
-      t->state = T_UNUSED;
+      t->kstack = KSTACK(NTHREAD * (int)(p - proc) + (int)(t - p->thread));// TODO: change this!!!
     }
   }
 }
