@@ -1,3 +1,7 @@
+#include "kernel/types.h"
+#include "user.h"
+#include "kernel/fcntl.h"
+
 struct counting_semaphore
 {
     int bin_sem1;

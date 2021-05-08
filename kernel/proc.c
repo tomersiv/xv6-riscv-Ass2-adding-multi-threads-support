@@ -20,6 +20,7 @@ struct spinlock tid_lock;
 
 // task 4.1 - TODO: check if needed!!
 struct spinlock bsems_lock;
+struct binSem bin_semaphores[MAX_BSEM];
 
 extern void forkret(void);
 
@@ -107,7 +108,7 @@ myproc(void)
   push_off();
   struct cpu *c = mycpu();
   // struct proc *p = c->thread->parent;
-  
+
   // try to fix kerneltrap
   struct proc *p = c->proc;
 
@@ -177,7 +178,7 @@ found:
   p->state = USED;
   p->thread[0].tid = alloctid();
   p->thread[0].state = USED;
-  p->thread[0].parent = p; 
+  p->thread[0].parent = p;
   // Allocate a trapframe page.
   if ((p->thread[0].trapframe = (struct trapframe *)kalloc()) == 0)
   {
@@ -228,13 +229,15 @@ freeproc(struct proc *p)
 {
   struct thread *t;
 
-  for (t = p->thread; t < &p->thread[NTHREAD]; t++) {
-    if (t->state == T_ZOMBIE){
+  for (t = p->thread; t < &p->thread[NTHREAD]; t++)
+  {
+    if (t->state == T_ZOMBIE)
+    {
       kthread_free(t);
     }
   }
 
-  if(p->thread[0].trapframe)
+  if (p->thread[0].trapframe)
   {
     kfree(p->thread[0].trapframe);
   }
@@ -449,13 +452,12 @@ void exit(int status)
 {
   struct proc *p = myproc();
   struct thread *t = mythread();
-  
 
   if (p == initproc)
     panic("init exiting");
 
   killThreadsExceptCurrent();
-  
+
   // Close all open files.
   for (int fd = 0; fd < NOFILE; fd++)
   {
@@ -486,7 +488,7 @@ void exit(int status)
   t->state = T_ZOMBIE;
 
   release(&wait_lock);
-  
+
   // Jump into the scheduler, never to return.
   sched();
   panic("zombie exit");
@@ -590,10 +592,10 @@ void scheduler(void)
             // before jumping back to us.
             t->state = T_RUNNING;
             c->thread = t;
-            
-            // try to fix kernel trap 
-            c->proc = p; 
-            
+
+            // try to fix kernel trap
+            c->proc = p;
+
             swtch(&c->context, &t->context);
 
             // Process is done running for now.
@@ -605,7 +607,7 @@ void scheduler(void)
       }
       // else
       // {
-        // release(&p->lock);
+      // release(&p->lock);
       // }
     }
   }
@@ -623,7 +625,8 @@ void sched(void)
   int intena;
   struct thread *t = mythread();
 
-  if (!holding(&t->lock)) {
+  if (!holding(&t->lock))
+  {
     printf("panic in thread %d\n", t->tid);
     panic("sched t->lock");
   }
@@ -1135,7 +1138,7 @@ void kthread_exit(int status)
       acquire(&t->lock);
       printf("acquired t->lock\n");
       // check if thread is not the last thread alive
-      if (t->state != T_UNUSED && t->state != T_ZOMBIE) 
+      if (t->state != T_UNUSED && t->state != T_ZOMBIE)
       {
         curr_thread->xstate = status;
         curr_thread->state = T_ZOMBIE;
@@ -1268,39 +1271,63 @@ void killThreadsExceptCurrent()
 }
 int bsem_alloc(void)
 {
-  int i;
+  int i = 0;
   struct binSem *bsem;
   acquire(&bsems_lock);
-  for (bsem = binary_semaphores; bsem < &binary_semaphores[MAX_BSEM]; bsem++)
+  bsem = bin_semaphores;
+  while(bsem < &bin_semaphores[MAX_BSEM]) 
   {
     acquire(&bsem->lock);
-    if(bsem->state == FREE)
+    if (bsem->state == FREE)
     {
       bsem->state = RELEASED;
       release(&bsems_lock);
       release(&bsem->lock);
       return i;
     }
+    bsem++;
     i++;
     release(&bsem->lock);
   }
   release(&bsems_lock);
+  return -1;
 }
 
 void bsem_free(int descriptor)
 {
-  if(descriptor >= 0 && descriptor < MAX_BSEM)
+  if (descriptor >= 0 && descriptor < MAX_BSEM)
   {
-    acquire(&(&binary_semaphores[descriptor])->lock);
+    acquire(&(&bin_semaphores[descriptor])->lock);
     acquire(&bsems_lock);
-    binary_semaphores[descriptor].state = FREE;
-    release(&(&binary_semaphores[descriptor])->lock);
+    bin_semaphores[descriptor].state = FREE;
+    release(&(&bin_semaphores[descriptor])->lock);
     release(&bsems_lock);
   }
 }
 
 void bsem_down(int descriptor)
 {
-  
+  if (descriptor >= 0 && descriptor < MAX_BSEM && bin_semaphores[descriptor].state != FREE)
+  {
+    struct binSem *bsem = &bin_semaphores[descriptor];
+    acquire(&bsem->lock);
+    while (bsem->state == ACQUIRED)
+    {
+      sleep(bsem, &bsem->lock);
+    }
+    bsem->state = ACQUIRED;
+    release(&bsem->lock);
+  }
 }
 
+void bsem_up(int descriptor)
+{
+  if (descriptor >= 0 && descriptor < MAX_BSEM && bin_semaphores[descriptor].state != FREE)
+  {
+    struct binSem *bsem = &bin_semaphores[descriptor];
+    wakeup(bsem);
+    acquire(&bsem->lock);
+    bsem->state = RELEASED;
+    release(&bsem->lock);
+  }
+}

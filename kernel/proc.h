@@ -173,4 +173,3 @@ struct binSem
   struct spinlock lock;
 };
 
-struct binSem binary_semaphores[MAX_BSEM];
