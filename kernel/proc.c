@@ -18,6 +18,9 @@ struct spinlock pid_lock;
 int nexttid = 1;
 struct spinlock tid_lock;
 
+// task 4.1 - TODO: check if needed!!
+struct spinlock bsems_lock;
+
 extern void forkret(void);
 
 extern void *sigret_start(void);
@@ -62,6 +65,9 @@ void procinit(void)
   initlock(&pid_lock, "nextpid");
   initlock(&tid_lock, "nexttid");
   initlock(&wait_lock, "wait_lock");
+  // task 4.1
+  initlock(&bsems_lock, "bsems_lock");
+
   for (p = proc; p < &proc[NPROC]; p++)
   {
     initlock(&p->lock, "proc");
@@ -1076,8 +1082,8 @@ found:
     release(&t->lock);
     return 0;
   }
-  // t->trapframe = (p->thread[0].trapframe + (int)(t - p->thread) * sizeof(struct trapframe)); // TODO: check this!!
-  t->trapframe = mythread()->trapframe;
+  t->trapframe = (p->thread[0].trapframe + (int)(t - p->thread) * sizeof(struct trapframe)); // TODO: check this!!
+  *(t->trapframe) = *(mythread()->trapframe);
 
   // Set up new context to start executing at forkret,
   // which returns to user space.
@@ -1259,4 +1265,24 @@ void killThreadsExceptCurrent()
       }
     }
   }
+}
+int bsem_alloc(void)
+{
+  int i;
+  struct binSem *bsem;
+  acquire(&bsems_lock);
+  for (bsem = binary_semaphores; bsem < &binary_semaphores[MAX_BSEM]; bsem++)
+  {
+    acquire(&bsem->lock);
+    if(bsem->state == FREE)
+    {
+      bsem->state = RELEASED;
+      release(&bsems_lock);
+      release(&bsem->lock);
+      return i;
+    }
+    i++;
+    release(&bsem->lock);
+  }
+  release(&bsems_lock);
 }
