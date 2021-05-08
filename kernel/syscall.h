@@ -35,3 +35,9 @@
 #define SYS_kthread_join 27
 // task 3.2 - kthread_exit system call
 #define SYS_kthread_exit 28
+// task 4.1 - binary semaphore system calls
+#define SYS_bsem_alloc 29
+#define SYS_bsem_free 30
+#define SYS_bsem_down 31
+#define SYS_bsem_up 32
+

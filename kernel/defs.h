@@ -132,6 +132,11 @@ struct thread * mythread(void);
 // task 3.2 - killThreadsExceptCurrent: kills all threads in a 
 // process except the one currently running the fucntion
 void killThreadsExceptCurrent(void);
+// task 4.1 - binary semaphore system calls
+int bsem_alloc(void);
+void bsem_free(int);
+void bsem_down(int);
+void bsem_up(int);
 
 // spinlock.c
 void            acquire(struct spinlock*);

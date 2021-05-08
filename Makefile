@@ -138,6 +138,7 @@ UPROGS=\
 	$U/_sigtests\
 	$U/_ttest\
 	$U/_usertests_ass2\
+	$U/_Csemaphore\
 
 
 fs.img: mkfs/mkfs README $(UPROGS)

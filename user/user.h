@@ -38,6 +38,11 @@ int kthread_id(void);
 int kthread_join(int thread_id, int* status);
 // task 3.2 - kthread_exit system call
 void kthread_exit(int status);
+// task 4.1 - binary semaphore system calls
+int bsem_alloc(void);
+void bsem_free(int);
+void bsem_down(int);
+void bsem_up(int);
 
 // ulib.c
 int stat(const char*, struct stat*);
