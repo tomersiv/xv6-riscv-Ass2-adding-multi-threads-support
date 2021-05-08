@@ -1286,3 +1286,21 @@ int bsem_alloc(void)
   }
   release(&bsems_lock);
 }
+
+void bsem_free(int descriptor)
+{
+  if(descriptor >= 0 && descriptor < MAX_BSEM)
+  {
+    acquire(&(&binary_semaphores[descriptor])->lock);
+    acquire(&bsems_lock);
+    binary_semaphores[descriptor].state = FREE;
+    release(&(&binary_semaphores[descriptor])->lock);
+    release(&bsems_lock);
+  }
+}
+
+void bsem_down(int descriptor)
+{
+  
+}
+
