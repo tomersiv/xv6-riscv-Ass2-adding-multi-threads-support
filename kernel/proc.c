@@ -1045,7 +1045,6 @@ int kthread_create(void (*start_func)(), void *stack)
 {
   struct proc *p = myproc();
   struct thread *t;
-
   acquire(&p->lock);
   for (t = p->thread; t < &p->thread[NTHREAD]; t++)
   {
@@ -1076,8 +1075,8 @@ found:
     release(&t->lock);
     return 0;
   }
-  // t->trapframe = (p->thread[0].trapframe + (int)(t - p->thread) * sizeof(struct trapframe)); // TODO: check this!!
-  t->trapframe = mythread()->trapframe;
+  t->trapframe = (p->thread[0].trapframe + (int)(t - p->thread) * sizeof(struct trapframe)); // TODO: check this!!
+  *(t->trapframe) = *(mythread()->trapframe);
 
   // Set up new context to start executing at forkret,
   // which returns to user space.
