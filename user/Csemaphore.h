@@ -1,4 +1,3 @@
-#include "kernel/types.h"
 #include "user.h"
 #include "kernel/fcntl.h"
 
