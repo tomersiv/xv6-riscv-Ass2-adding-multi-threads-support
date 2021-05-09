@@ -123,7 +123,7 @@ usertrapret(void)
   w_sstatus(x);
 
   // task 2.4 - call the function of handling a user-space signal
-  handle_signal();
+  // handle_signal(); // TODO: uncomment this
   
   // set S Exception Program Counter to the saved user pc.
   w_sepc(t->trapframe->epc);

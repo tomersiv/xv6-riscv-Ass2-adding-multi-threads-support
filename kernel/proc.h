@@ -84,7 +84,7 @@ struct trapframe {
   /* 280 */ uint64 t6;
 };
 
-enum procstate { UNUSED, USED, ZOMBIE };
+enum procstate { UNUSED, USED, RUNNABLE, ZOMBIE };
 enum threadstate { T_UNUSED, T_USED, T_SLEEPING, T_RUNNABLE, T_RUNNING, T_ZOMBIE };
 
 // Task 3.1 = defining thread struct

@@ -342,7 +342,7 @@ void userinit(void)
   safestrcpy(t->name, "initthread", sizeof(t->name));
   p->cwd = namei("/");
 
-  p->state = USED;
+  p->state = RUNNABLE;
   t->state = T_RUNNABLE;
 
   release(&p->lock);
@@ -438,6 +438,7 @@ int fork(void)
   release(&wait_lock);
 
   acquire(&np->lock);
+  np->state = RUNNABLE;
   nt->state = T_RUNNABLE;
   release(&np->lock);
 
@@ -590,9 +591,8 @@ void scheduler(void)
 
     for (p = proc; p < &proc[NPROC]; p++)
     {
-      if (p->state == USED)
+      if (p->state == RUNNABLE)
       {
-        // release(&p->lock);
         for (t = p->thread; t < &p->thread[NTHREAD]; t++)
         {
           acquire(&t->lock);
@@ -719,7 +719,7 @@ void wakeup(void *chan)
 
   for (p = proc; p < &proc[NPROC]; p++)
   {
-    if (p->state == USED) {
+    if (p->state == RUNNABLE) {
       acquire(&p->lock);
       for (t = p->thread; t < &p->thread[NTHREAD]; t++)
       {
