@@ -33,5 +33,5 @@ void thread_test(){
 
 int main(int argc, char **argv){
     thread_test();
-    return 0;
+    exit(0);
 }

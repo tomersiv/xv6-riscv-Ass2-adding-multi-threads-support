@@ -48,11 +48,11 @@ void proc_mapstacks(pagetable_t kpgtbl)
   {
     for (t = p->thread; t < &p->thread[NTHREAD]; t++)
     {
-      char *ta = kalloc();
-      if (ta == 0)
+      char *pa = kalloc();
+      if (pa == 0)
         panic("kalloc");
-      uint64 va = KSTACK((int)(p - proc), (int)(t - p->thread));// TODO: change this!!!
-      kvmmap(kpgtbl, va, (uint64)ta, PGSIZE, PTE_R | PTE_W);
+      uint64 va = KSTACK((int)(p - proc), (int)(t - p->thread));
+      kvmmap(kpgtbl, va, (uint64)pa, PGSIZE, PTE_R | PTE_W);
     }
   }
 }
@@ -71,8 +71,8 @@ void procinit(void)
     initlock(&p->lock, "proc");
     for (t = p->thread; t < &p->thread[NTHREAD]; t++)
     {
-      t->kstack = KSTACK((int)(p - proc), (int)(t - p->thread));// TODO: change this!!!
       initlock(&t->lock, "thread");
+      t->kstack = KSTACK((int)(p - proc), (int)(t - p->thread));
     }
   }
 }
@@ -153,6 +153,7 @@ static struct proc *
 allocproc(void)
 {
   struct proc *p;
+  struct thread *t;
 
   for (p = proc; p < &proc[NPROC]; p++)
   {
@@ -169,30 +170,35 @@ allocproc(void)
   return 0;
 
 found:
-  p->pid = allocpid();
+  p->killed = 0;
   p->state = USED;
-  
-  acquire(&p->thread[0].lock);
+  p->pid = allocpid();
+
+  // t is the "main thread"
+  t = p->thread;
 
   // Allocate a trapframe page.
-  if ((p->thread[0].trapframe = (struct trapframe *)kalloc()) == 0)
-  
-  for (int i = 0; i<NTHREAD;i++){
-    p->thread[i].state = T_UNUSED;
-    p->thread[i].chan = 0;
-    p->thread[i].killed = 0;
-    p->thread[i].trapframe = (struct trapframe *)p->thread[0].trapframe + i;
-    p->thread[i].parent = p;
-  }
-
-  p->thread[0].tid = alloctid();
-  p->thread[0].state = USED;
-
+  if ((t->trapframe = (struct trapframe *)kalloc()) == 0)
   {
     freeproc(p);
     release(&p->lock);
     return 0;
   }
+  
+  for (int i = 0; i < NTHREAD; i++){
+    p->thread[i].state = T_UNUSED;
+    p->thread[i].chan = 0;
+    p->thread[i].killed = 0;
+
+    // TODO: to check if we can change this allocation
+    p->thread[i].trapframe = (struct trapframe *)t->trapframe + i;
+    p->thread[i].parent = p;
+  }
+
+  // TODO: maybe we need to acquire(&t->lock)
+  acquire(&t->lock);
+  t->tid = alloctid();
+  t->state = USED;
 
   // An empty user page table.
   p->pagetable = proc_pagetable(p);
@@ -205,9 +211,9 @@ found:
 
   // Set up new context to start executing at forkret,
   // which returns to user space.
-  memset(&p->thread[0].context, 0, sizeof(p->thread[0].context));
-  p->thread[0].context.ra = (uint64)forkret;
-  p->thread[0].context.sp = p->thread[0].kstack + PGSIZE;
+  memset(&t->context, 0, sizeof(t->context));
+  t->context.ra = (uint64)forkret;
+  t->context.sp = t->kstack + PGSIZE;
 
   // task 2.1.2 - Updating process creation behavior
   for (int i = 0; i < 32; i++)
@@ -242,9 +248,7 @@ freeproc(struct proc *p)
   }
 
   for (t = p->thread; t < &p->thread[NTHREAD]; t++) {
-    if (t->state == T_ZOMBIE){
       kthread_free(t);
-    }
   }
 
   if (p->pagetable)
@@ -319,9 +323,11 @@ uchar initcode[] = {
 void userinit(void)
 {
   struct proc *p;
+  struct thread *t;
 
   p = allocproc();
   initproc = p;
+  t = p->thread;
 
   // allocate one user page and copy init's instructions
   // and data into it.
@@ -329,18 +335,18 @@ void userinit(void)
   p->sz = PGSIZE;
 
   // prepare for the very first "return" from kernel to user.
-  p->thread[0].trapframe->epc = 0;     // user program counter
-  p->thread[0].trapframe->sp = PGSIZE; // user stack pointer
+  t->trapframe->epc = 0;     // user program counter
+  t->trapframe->sp = PGSIZE; // user stack pointer
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
-  safestrcpy(p->thread[0].name, "Nitzan Ya Gay", sizeof(p->thread[0].name));
+  safestrcpy(t->name, "initthread", sizeof(t->name));
   p->cwd = namei("/");
 
   p->state = USED;
-  p->thread[0].state = T_RUNNABLE;
+  t->state = T_RUNNABLE;
 
   release(&p->lock);
-  release(&p->thread[0].lock);
+  release(&t->lock);
 }
 
 // Grow or shrink user memory by n bytes.
@@ -350,8 +356,8 @@ int growproc(int n)// TODO: we acquired p->lock. is it good?
   uint sz;
   struct proc *p = myproc();
 
-  // task 3.1
-  acquire(&p->lock);
+  // task 3.1 - TODO!!
+  // acquire(&p->lock);
 
   sz = p->sz;
   if (n > 0)
@@ -366,7 +372,7 @@ int growproc(int n)// TODO: we acquired p->lock. is it good?
     sz = uvmdealloc(p->pagetable, sz, sz + n);
   }
   p->sz = sz;
-  release(&p->lock);
+  // release(&p->lock);
   return 0;
 }
 
@@ -385,7 +391,7 @@ int fork(void)
   {
     return -1;
   }
-
+  // main thread of the new process
   nt = np->thread;
 
   // Copy user memory from parent to child.
@@ -397,11 +403,14 @@ int fork(void)
   }
   np->sz = p->sz;
 
+  acquire(&wait_lock); // TODO: maybe we can delete this
   // copy saved user registers.
   *(nt->trapframe) = *(t->trapframe);
 
   // Cause fork to return 0 in the child.
   nt->trapframe->a0 = 0;
+
+  release(&wait_lock); // TODO: maybe we can delete this
 
   // increment reference counts on open file descriptors.
   for (i = 0; i < NOFILE; i++)
@@ -431,6 +440,8 @@ int fork(void)
   acquire(&np->lock);
   nt->state = T_RUNNABLE;
   release(&np->lock);
+
+  release(&nt->lock);
 
   return pid;
 }
@@ -496,6 +507,7 @@ void exit(int status)
 
 
   acquire(&t->lock);
+  release(&p->lock);
   release(&wait_lock);
   
   // Jump into the scheduler, never to return.
@@ -600,6 +612,7 @@ void scheduler(void)
             // Process is done running for now.
             // It should have changed its p->state before coming back.
             c->thread = 0;
+            c->proc = 0;
           }
           release(&t->lock);
         }
@@ -706,20 +719,22 @@ void wakeup(void *chan)
 
   for (p = proc; p < &proc[NPROC]; p++)
   {
-    acquire(&p->lock);
-    for (t = p->thread; t < &p->thread[NTHREAD]; t++)
-    {
-      if (t != mythread())
+    if (p->state == USED) {
+      acquire(&p->lock);
+      for (t = p->thread; t < &p->thread[NTHREAD]; t++)
       {
-        acquire(&t->lock);
-        if (t->state == T_SLEEPING && t->chan == chan)
+        if (t != mythread())
         {
-          t->state = T_RUNNABLE;
+          acquire(&t->lock);
+          if (t->state == T_SLEEPING && t->chan == chan)
+          {
+            t->state = T_RUNNABLE;
+          }
+          release(&t->lock);
         }
-        release(&t->lock);
       }
+      release(&p->lock);
     }
-    release(&p->lock);
   }
 }
 
@@ -743,7 +758,7 @@ int kill(int pid, int signum)
     {
       p->pending_sig = p->pending_sig | (1 << signum);
 
-      if (signum == SIGKILL)
+      if (signum == SIGKILL) // TODO: check this!!!
       {
         int allThreadsSleeping = 1;
         for (t = p->thread; t < &p->thread[NTHREAD]; t++)
@@ -1037,7 +1052,7 @@ void handle_signal()
   }
 }
 
-// Task 3.2 - the first scheduling of a thread created after kthread_create
+// TODO: check if needed!! Task 3.2 - the first scheduling of a thread created after kthread_create
 // will continue from userspace (with the epc set to start_func)
 void threadret(void)
 {
@@ -1077,11 +1092,9 @@ found:
   t->context.ra = (uint64)threadret; //check if we can change it to forkret
   t->context.sp = t->kstack + PGSIZE;
 
-  printf("finished setting context for thread: %d\n", t->tid);
-
  *(t->trapframe) = *(mythread()->trapframe);
   t->trapframe->epc = (uint64)start_func;
-  t->trapframe->sp = (uint64)stack + MAX_STACK_SIZE;
+  t->trapframe->sp = (uint64)stack + MAX_STACK_SIZE; // TODO: maybe -16
 
   t->state = T_RUNNABLE;
   release(&t->lock);
@@ -1093,9 +1106,7 @@ found:
 int kthread_id(void)
 {
   struct thread *t = mythread();
-  acquire(&t->lock); // TODO: i don't think we need to lock
   int tid = t->tid;
-  release(&t->lock);
   return tid;
 }
 
@@ -1104,11 +1115,6 @@ void kthread_exit(int status)
   struct proc *p = myproc();
   struct thread *curr_thread = mythread();
   struct thread *t;
-
-  acquire(&wait_lock);
-  acquire(&curr_thread->lock);
-  wakeup(curr_thread);
-  release(&wait_lock);
 
   acquire(&p->lock);
 
@@ -1120,17 +1126,22 @@ void kthread_exit(int status)
       // check if thread is not the last thread alive
       if (t->state != T_UNUSED && t->state != T_ZOMBIE) 
       {
+        // acquire(&wait_lock); // TODO: maybe need this
+        release(&t->lock);
+        acquire(&curr_thread->lock);
         curr_thread->xstate = status;
         curr_thread->state = T_ZOMBIE;
-        release(&t->lock);
+        release(&curr_thread->lock);
+        //release(&wait_lock);
         release(&p->lock);
+        wakeup(curr_thread);
+        acquire(&curr_thread->lock);
         sched();
         panic("zombie thread exit");
       }
       release(&t->lock);
     }
   }
-  release(&curr_thread->lock);
   release(&p->lock);
   exit(0); // only one thread currently runnning - terminates the whole process
 }
@@ -1186,15 +1197,13 @@ int kthread_join(int thread_id, int *status)
   }
 }
 
+// TODO: different
 void kthread_free(struct thread *t)
 {
   t->tid = 0;
-  t->parent = 0;
   t->state = T_UNUSED;
-  t->trapframe = 0;
   t->chan = 0;
   t->xstate = 0;
-  t->name[0] = 0;
   t->killed = 0;
 }
 
@@ -1211,7 +1220,10 @@ void killThreadsExceptCurrent()
     if (t != curr_thread)
     {
       acquire(&t->lock);
-      if (t->state != T_UNUSED && t->state != T_ZOMBIE)
+
+      // TODO: original version, check if good
+      // if (t->state != T_UNUSED && t->state != T_ZOMBIE) 
+      if (t->state != T_UNUSED)
       {
         t->killed = 1;
       }
@@ -1222,31 +1234,18 @@ void killThreadsExceptCurrent()
       release(&t->lock);
     }
   }
-
   release(&p->lock);
 
+  // check if all threads except current threads are zombies
   allZombies = 0;
   while (!allZombies)
   {
     allZombies = 1;
     for (t = p->thread; t < &p->thread[NTHREAD]; t++)
     {
+      if (t != curr_thread && t->state != T_ZOMBIE && t->state != T_UNUSED)
       {
-        if (t != curr_thread)
-        {
-          acquire(&t->lock);
-          if (t->state == T_ZOMBIE || t->state == T_UNUSED)
-          {
-            if (t->state == T_ZOMBIE)
-            {
-              kthread_free(t);
-            }
-          }
-          release(&t->lock);
-        }
-        else {
-          allZombies = 1;
-        }
+        allZombies = 0;
       }
     }
   }

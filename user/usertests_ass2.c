@@ -36,10 +36,10 @@ void test_handler(int signum){
     printf("Received sigtest\n");
 }
 
-// void test_thread(){
-//     printf("Thread is now running\n");
-//     kthread_exit(0);
-// }
+void test_thread(){
+    printf("Thread is now running\n");
+    kthread_exit(0);
+}
 
 void signal_test(char *s){
     int pid;
@@ -60,17 +60,17 @@ void signal_test(char *s){
     printf("Finished testing signals\n");
 }
 
-// void thread_test(char *s){
-//     int tid;
-//     int status;
-//     void* stack = malloc(STACK_SIZE);
-//     tid = kthread_create(test_thread, stack);
-//     kthread_join(tid,&status);
+void thread_test(char *s){
+    int tid;
+    int status;
+    void* stack = malloc(MAX_STACK_SIZE);
+    tid = kthread_create(test_thread, stack);
+    kthread_join(tid,&status);
 
-//     tid = kthread_id();
-//     free(stack);
-//     printf("Finished testing threads, main thread id: %d, %d\n", tid,status);
-// }
+    tid = kthread_id();
+    free(stack);
+    printf("Finished testing threads, main thread id: %d, %d\n", tid,status);
+}
 
 
 // void bsem_test(char *s){
@@ -2881,7 +2881,7 @@ main(int argc, char *argv[])
   } tests[] = {
 	  //ASS 2 Compilation tests:
 	  {signal_test,"signal_test"},
-	  // {thread_test,"thread_test"},
+	  {thread_test,"thread_test"},
 	  // {bsem_test,"bsem_test"},
 	  // {Csem_test,"Csem_test"},
 	  
@@ -2894,8 +2894,8 @@ main(int argc, char *argv[])
 	
 		  
 // xv6 included tests:  // comented out long tests
- //   {manywrites, "manywrites"},  //800 ticks, too long
- //   {execout, "execout"}, //1600 ticks, too long
+   {manywrites, "manywrites"},  //800 ticks, too long
+   {execout, "execout"}, //1600 ticks, too long
     {copyin, "copyin"},//5 ticks
     {copyout, "copyout"},// 0 ticks
     {copyinstr1, "copyinstr1"},// 0 ticks
@@ -2904,56 +2904,56 @@ main(int argc, char *argv[])
     {rwsbrk, "rwsbrk" },// 3 ticks
     {truncate1, "truncate1"},// 4 ticks
     {truncate2, "truncate2"},// 4 ticks
- //   {truncate3, "truncate3"},// 0 ticks
-//    {reparent2, "reparent2"},// 600 ticks, causes fails in 
+   {truncate3, "truncate3"},// 0 ticks
+   {reparent2, "reparent2"},// 600 ticks, causes fails in 
     {pgbug, "pgbug" },// 0 ticks
-   // {sbrkbugs, "sbrkbugs" }, // 1 ticks
-    // {badwrite, "badwrite" },
+   {sbrkbugs, "sbrkbugs" }, // 1 ticks
+    {badwrite, "badwrite" },
     {badarg, "badarg" },// 200 ticks
     {reparent, "reparent" },
     {twochildren, "twochildren"},
     {forkfork, "forkfork"},
     {forkforkfork, "forkforkfork"},
     {argptest, "argptest"},// 1 ticks
-//    {createdelete, "createdelete"},// 200 ticks
-//    {linkunlink, "linkunlink"},// 80 ticks
+   {createdelete, "createdelete"},// 200 ticks
+   {linkunlink, "linkunlink"},// 80 ticks
     {linktest, "linktest"},// 9 ticks
     {unlinkread, "unlinkread"},// 7 ticks
-//    {concreate, "concreate"},// 430 ticks
+   {concreate, "concreate"},// 430 ticks
     {subdir, "subdir"},// 24 ticks
     {fourfiles, "fourfiles"},// 26 ticks
-//    {sharedfd, "sharedfd"},// 200 ticks
+   {sharedfd, "sharedfd"},// 200 ticks
     {dirtest, "dirtest"},// 4 ticks
     {exectest, "exectest"},// 0 ticks
     {bigargtest, "bigargtest"},//4 ticks
     {bigwrite, "bigwrite"},// 170 ticks
     {bsstest, "bsstest"},// 0 ticks
-//    {sbrkbasic, "sbrkbasic"},// 90 ticks
-//    {sbrkmuch, "sbrkmuch"},// 70 ticks
- //   {kernmem, "kernmem"},// 17 ticks
-//    {sbrkfail, "sbrkfail"},// 300 ticks
+   {sbrkbasic, "sbrkbasic"},// 90 ticks
+   {sbrkmuch, "sbrkmuch"},// 70 ticks
+   {kernmem, "kernmem"},// 17 ticks
+   {sbrkfail, "sbrkfail"},// 300 ticks
     {sbrkarg, "sbrkarg"},// 4 ticks
     {validatetest, "validatetest"},// 11 ticks
-  //  {stacktest, "stacktest"},// 0 ticks
+   {stacktest, "stacktest"},// 0 ticks
     {opentest, "opentest"},// 1 ticks
-//    {writetest, "writetest"},// 50 ticks
-//    {writebig, "writebig"},// 130 ticks
-//    {createtest, "createtest"},// 200 ticks
+   {writetest, "writetest"},// 50 ticks
+   {writebig, "writebig"},// 130 ticks
+   {createtest, "createtest"},// 200 ticks
     {openiputtest, "openiput"},// 5 ticks
     {exitiputtest, "exitiput"},// 5 ticks
     {iputtest, "iput"},// 4 ticks
-//    {mem, "mem"},// 200 ticks
+   {mem, "mem"},// 200 ticks
     {pipe1, "pipe1"},// 1 ticks
-//    {killstatus, "killstatus"},//150 ticks
+   {killstatus, "killstatus"},//150 ticks
     {preempt, "preempt"},    //doesn't work on FCFS
     {exitwait, "exitwait"},// 18 ticks
     {rmdot, "rmdot"},//6 ticks
     {fourteen, "fourteen"},// 12 ticks
     {bigfile, "bigfile"},// 12 ticks
     {dirfile, "dirfile"},// 4 ticks
-//    {iref, "iref"},// 160 ticks
+   {iref, "iref"},// 160 ticks
     {forktest, "forktest"}, // 14 ticks
-//    {bigdir, "bigdir"}, // slow // 3800 ticks
+   {bigdir, "bigdir"}, // slow // 3800 ticks
     { 0, 0},
   };
 
