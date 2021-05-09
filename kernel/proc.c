@@ -51,7 +51,7 @@ void proc_mapstacks(pagetable_t kpgtbl)
       char *ta = kalloc();
       if (ta == 0)
         panic("kalloc");
-      uint64 va = KSTACK(NTHREAD * (int)(p - proc) + (int)(t - p->thread));// TODO: change this!!!
+      uint64 va = KSTACK((int)(p - proc), (int)(t - p->thread));// TODO: change this!!!
       kvmmap(kpgtbl, va, (uint64)ta, PGSIZE, PTE_R | PTE_W);
     }
   }
@@ -71,8 +71,8 @@ void procinit(void)
     initlock(&p->lock, "proc");
     for (t = p->thread; t < &p->thread[NTHREAD]; t++)
     {
+      t->kstack = KSTACK((int)(p - proc), (int)(t - p->thread));// TODO: change this!!!
       initlock(&t->lock, "thread");
-      t->kstack = KSTACK(NTHREAD * (int)(p - proc) + (int)(t - p->thread));// TODO: change this!!!
     }
   }
 }
@@ -171,11 +171,23 @@ allocproc(void)
 found:
   p->pid = allocpid();
   p->state = USED;
-  p->thread[0].tid = alloctid();
-  p->thread[0].state = USED;
-  p->thread[0].parent = p; 
+  
+  acquire(&p->thread[0].lock);
+
   // Allocate a trapframe page.
   if ((p->thread[0].trapframe = (struct trapframe *)kalloc()) == 0)
+  
+  for (int i = 0; i<NTHREAD;i++){
+    p->thread[i].state = T_UNUSED;
+    p->thread[i].chan = 0;
+    p->thread[i].killed = 0;
+    p->thread[i].trapframe = (struct trapframe *)p->thread[0].trapframe + i;
+    p->thread[i].parent = p;
+  }
+
+  p->thread[0].tid = alloctid();
+  p->thread[0].state = USED;
+
   {
     freeproc(p);
     release(&p->lock);
@@ -224,15 +236,15 @@ freeproc(struct proc *p)
 {
   struct thread *t;
 
+  if(p->thread[0].trapframe)
+  {
+    kfree(p->thread[0].trapframe);
+  }
+
   for (t = p->thread; t < &p->thread[NTHREAD]; t++) {
     if (t->state == T_ZOMBIE){
       kthread_free(t);
     }
-  }
-
-  if(p->thread[0].trapframe)
-  {
-    kfree(p->thread[0].trapframe);
   }
 
   if (p->pagetable)
@@ -324,16 +336,17 @@ void userinit(void)
   safestrcpy(p->thread[0].name, "Nitzan Ya Gay", sizeof(p->thread[0].name));
   p->cwd = namei("/");
 
+  p->state = USED;
   p->thread[0].state = T_RUNNABLE;
 
   release(&p->lock);
+  release(&p->thread[0].lock);
 }
 
 // Grow or shrink user memory by n bytes.
 // Return 0 on success, -1 on failure.
-int growproc(int n)
+int growproc(int n)// TODO: we acquired p->lock. is it good?
 {
-  //TODO: need to lock this function somehow
   uint sz;
   struct proc *p = myproc();
 
@@ -441,7 +454,7 @@ void reparent(struct proc *p)
 // Exit the current process.  Does not return.
 // An exited process remains in the zombie state
 // until its parent calls wait().
-void exit(int status)
+void exit(int status) 
 {
   struct proc *p = myproc();
   struct thread *t = mythread();
@@ -475,12 +488,14 @@ void exit(int status)
 
   // Parent might be sleeping in wait().
   wakeup(p->parent);
-  acquire(&t->lock);
+  acquire(&p->lock);
 
   p->xstate = status;
   p->state = ZOMBIE;
   t->state = T_ZOMBIE;
 
+
+  acquire(&t->lock);
   release(&wait_lock);
   
   // Jump into the scheduler, never to return.
@@ -512,14 +527,6 @@ int wait(uint64 addr)
         havekids = 1;
         if (np->state == ZOMBIE)
         {
-          // for (t = p->thread; t < &p->thread[NTHREAD]; t++)
-          // {
-          //   if (t->state == T_ZOMBIE)
-          //   {
-
-          //   }
-          // }
-
           // Found one.
           pid = np->pid;
           if (addr != 0 && copyout(p->pagetable, addr, (char *)&np->xstate,
@@ -571,8 +578,6 @@ void scheduler(void)
 
     for (p = proc; p < &proc[NPROC]; p++)
     {
-      // printf("thread %d in scheduler\n", mythread()->tid);
-      // acquire(&p->lock);
       if (p->state == USED)
       {
         // release(&p->lock);
@@ -599,10 +604,6 @@ void scheduler(void)
           release(&t->lock);
         }
       }
-      // else
-      // {
-        // release(&p->lock);
-      // }
     }
   }
 }
@@ -705,6 +706,7 @@ void wakeup(void *chan)
 
   for (p = proc; p < &proc[NPROC]; p++)
   {
+    acquire(&p->lock);
     for (t = p->thread; t < &p->thread[NTHREAD]; t++)
     {
       if (t != mythread())
@@ -717,6 +719,7 @@ void wakeup(void *chan)
         release(&t->lock);
       }
     }
+    release(&p->lock);
   }
 }
 
@@ -1051,51 +1054,37 @@ int kthread_create(void (*start_func)(), void *stack)
   acquire(&p->lock);
   for (t = p->thread; t < &p->thread[NTHREAD]; t++)
   {
+    acquire(&t->lock);
     if (t->state == T_UNUSED)
     {
       goto found;
     }
+    release(&t->lock);
   }
   release(&p->lock);
   return 0;
 
 found:
-  acquire(&wait_lock); // TODO: check if needed!!
-  t->parent = p;
-  release(&wait_lock);
 
-  initlock(&t->lock, "thread");
-  acquire(&t->lock);
   t->state = T_USED;
-
   release(&p->lock);
 
   t->tid = alloctid();
-  t->chan = 0;
-  if ((t->kstack = kalloc() == 0))
-  {
-    kthread_free(t);
-    release(&t->lock);
-    return 0;
-  }
-  // t->trapframe = (p->thread[0].trapframe + (int)(t - p->thread) * sizeof(struct trapframe)); // TODO: check this!!
-  t->trapframe = mythread()->trapframe;
 
   // Set up new context to start executing at forkret,
   // which returns to user space.
   memset(&t->context, 0, sizeof(t->context));
-  t->context.ra = (uint64)threadret;
+  t->context.ra = (uint64)threadret; //check if we can change it to forkret
   t->context.sp = t->kstack + PGSIZE;
 
   printf("finished setting context for thread: %d\n", t->tid);
 
+ *(t->trapframe) = *(mythread()->trapframe);
   t->trapframe->epc = (uint64)start_func;
   t->trapframe->sp = (uint64)stack + MAX_STACK_SIZE;
 
   t->state = T_RUNNABLE;
-  printf("finished creating thread: %d\n", t->tid);
   release(&t->lock);
-  printf("released thread's lock: %d\n", t->tid);
 
   return t->tid;
 }
@@ -1104,7 +1093,7 @@ found:
 int kthread_id(void)
 {
   struct thread *t = mythread();
-  acquire(&t->lock);
+  acquire(&t->lock); // TODO: i don't think we need to lock
   int tid = t->tid;
   release(&t->lock);
   return tid;
@@ -1112,7 +1101,6 @@ int kthread_id(void)
 
 void kthread_exit(int status)
 {
-  printf("entered exit\n");
   struct proc *p = myproc();
   struct thread *curr_thread = mythread();
   struct thread *t;
@@ -1123,20 +1111,19 @@ void kthread_exit(int status)
   release(&wait_lock);
 
   acquire(&p->lock);
-  printf("acquired p->lock\n");
+
   for (t = p->thread; t < &p->thread[NTHREAD]; t++)
   {
     if (t != curr_thread)
     {
       acquire(&t->lock);
-      printf("acquired t->lock\n");
       // check if thread is not the last thread alive
       if (t->state != T_UNUSED && t->state != T_ZOMBIE) 
       {
         curr_thread->xstate = status;
         curr_thread->state = T_ZOMBIE;
-        release(&p->lock);
         release(&t->lock);
+        release(&p->lock);
         sched();
         panic("zombie thread exit");
       }
@@ -1150,7 +1137,6 @@ void kthread_exit(int status)
 
 int kthread_join(int thread_id, int *status)
 {
-  printf("entered join");
   int found = 0;
   struct proc *p = myproc();
   struct thread *t;
@@ -1202,10 +1188,6 @@ int kthread_join(int thread_id, int *status)
 
 void kthread_free(struct thread *t)
 {
-  if (t->kstack && t != t->parent->thread)
-  {
-    kfree((void *)t->kstack);
-  }
   t->tid = 0;
   t->parent = 0;
   t->state = T_UNUSED;
@@ -1218,11 +1200,12 @@ void kthread_free(struct thread *t)
 
 void killThreadsExceptCurrent()
 {
-  int zombies;
+  int allZombies;
   struct proc *p = myproc();
   struct thread *curr_thread = mythread();
   struct thread *t;
 
+  acquire(&p->lock);
   for (t = p->thread; t < &p->thread[NTHREAD]; t++)
   {
     if (t != curr_thread)
@@ -1239,9 +1222,13 @@ void killThreadsExceptCurrent()
       release(&t->lock);
     }
   }
-  zombies = 0;
-  while (zombies != NTHREAD - 1)
+
+  release(&p->lock);
+
+  allZombies = 0;
+  while (!allZombies)
   {
+    allZombies = 1;
     for (t = p->thread; t < &p->thread[NTHREAD]; t++)
     {
       {
@@ -1250,13 +1237,15 @@ void killThreadsExceptCurrent()
           acquire(&t->lock);
           if (t->state == T_ZOMBIE || t->state == T_UNUSED)
           {
-            zombies++;
             if (t->state == T_ZOMBIE)
             {
               kthread_free(t);
             }
           }
           release(&t->lock);
+        }
+        else {
+          allZombies = 1;
         }
       }
     }
