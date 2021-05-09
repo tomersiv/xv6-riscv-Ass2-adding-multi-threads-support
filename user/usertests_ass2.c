@@ -2880,7 +2880,7 @@ main(int argc, char *argv[])
     char *s;
   } tests[] = {
 	  //ASS 2 Compilation tests:
-	  {signal_test,"signal_test"},
+	  // {signal_test,"signal_test"},
 	  {thread_test,"thread_test"},
 	  // {bsem_test,"bsem_test"},
 	  // {Csem_test,"Csem_test"},
