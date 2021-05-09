@@ -223,7 +223,7 @@ found:
   }
   p->pending_sig = 0;
   p->sig_mask = 0;
-  p->usertrap_backup = 0;
+  //p->usertrap_backup = 0;
   // task 2.4 - flag to mark when a user signal is being handled
   p->handling_usersignal = 0;
 
@@ -836,7 +836,7 @@ void procdump(void)
   static char *states[] = {
       [UNUSED] "unused",
       // [SLEEPING] "sleep ",
-      // [RUNNABLE] "runble",
+      [RUNNABLE] "runnable",
       // [RUNNING] "run   ",
       [ZOMBIE] "zombie"};
   struct proc *p;
@@ -903,9 +903,9 @@ int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact)
 void sigkill_handler()
 {
   struct proc *p = myproc();
-  acquire(&p->lock);
+  //acquire(&p->lock);
   p->killed = 1;
-  release(&p->lock);
+  //release(&p->lock);
 }
 
 // check if SIGCONT is pending with SIG_DFL as handler, and SIGCONT is not blocked
@@ -942,7 +942,7 @@ void sigstop_handler()
 {
   struct proc *p = myproc();
   int signum = -1;
-  acquire(&p->lock);
+  //acquire(&p->lock);
   while (!condition1() && ((signum = condition2()) == -1))
   {
     yield();
@@ -956,7 +956,7 @@ void sigstop_handler()
   {
     p->pending_sig &= ~(1 << signum);
   }
-  release(&p->lock);
+  //release(&p->lock);
 
   return;
 }
@@ -968,7 +968,7 @@ void sigret(void)
   struct thread *t = mythread();
 
   acquire(&p->lock);
-  copyin(p->pagetable, (char *)t->trapframe, (uint64)p->usertrap_backup, sizeof(struct trapframe));
+  copyin(p->pagetable, (char *)t->trapframe, (uint64)t->usertrap_backup, sizeof(struct trapframe));
   p->sig_mask = p->mask_backup;
 
   // restore stack state to be the state before handeling the signals
@@ -1034,8 +1034,8 @@ void handle_signal()
 
         // backup trapframe
         t->trapframe->sp -= sizeof(struct trapframe);
-        p->usertrap_backup = (struct trapframe *)(t->trapframe->sp);
-        copyout(p->pagetable, (uint64)p->usertrap_backup, (char *)t->trapframe, sizeof(struct trapframe));
+        t->usertrap_backup = (struct trapframe *)(t->trapframe->sp);
+        copyout(p->pagetable, (uint64)t->usertrap_backup, (char *)t->trapframe, sizeof(struct trapframe));
 
         // "inject" implicit call to sigret system call
         uint64 size = (uint64)&sigret_end - (uint64)&sigret_start;
@@ -1089,7 +1089,7 @@ found:
   // Set up new context to start executing at forkret,
   // which returns to user space.
   memset(&t->context, 0, sizeof(t->context));
-  t->context.ra = (uint64)threadret; //check if we can change it to forkret
+  t->context.ra = (uint64)forkret; //check if we can change it to forkret
   t->context.sp = t->kstack + PGSIZE;
 
  *(t->trapframe) = *(mythread()->trapframe);

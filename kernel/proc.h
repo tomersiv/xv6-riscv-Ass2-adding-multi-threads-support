@@ -100,6 +100,7 @@ struct thread {
   struct trapframe *trapframe; // data page for trampoline.S
   struct context context;      // swtch() here to run thread
   char name[16];               // thread name (debugging)
+  struct trapframe *usertrap_backup; // task 3.1
 };
 
 // Per-process state
@@ -130,7 +131,7 @@ struct proc {
   uint mask_backup;            // task 2.4 - backup of the mask before signal handlings
   void *sig_handlers[32];      // task 2.1.1
   uint handlers_mask[32];      // task 2.1.4 - blocked signals during handlers execution
-  struct trapframe *usertrap_backup;  // task 2.1.1
+  // struct trapframe *usertrap_backup;  // task 2.1.1
   int handling_usersignal;         // task 2.4 - a flag that indicates that a user signal is being handled
   struct thread thread[NTHREAD];  // Task 3.1
 };

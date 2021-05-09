@@ -2894,44 +2894,44 @@ main(int argc, char *argv[])
 	
 		  
 // xv6 included tests:  // comented out long tests
-   {manywrites, "manywrites"},  //800 ticks, too long
-   {execout, "execout"}, //1600 ticks, too long
-    {copyin, "copyin"},//5 ticks
-    {copyout, "copyout"},// 0 ticks
-    {copyinstr1, "copyinstr1"},// 0 ticks
-    {copyinstr2, "copyinstr2"},// 1 ticks
-    {copyinstr3, "copyinstr3"},// 0 ticks
-    {rwsbrk, "rwsbrk" },// 3 ticks
-    {truncate1, "truncate1"},// 4 ticks
-    {truncate2, "truncate2"},// 4 ticks
-   {truncate3, "truncate3"},// 0 ticks
-   {reparent2, "reparent2"},// 600 ticks, causes fails in 
-    {pgbug, "pgbug" },// 0 ticks
-   {sbrkbugs, "sbrkbugs" }, // 1 ticks
-    {badwrite, "badwrite" },
-    {badarg, "badarg" },// 200 ticks
-    {reparent, "reparent" },
-    {twochildren, "twochildren"},
-    {forkfork, "forkfork"},
-    {forkforkfork, "forkforkfork"},
-    {argptest, "argptest"},// 1 ticks
-   {createdelete, "createdelete"},// 200 ticks
-   {linkunlink, "linkunlink"},// 80 ticks
-    {linktest, "linktest"},// 9 ticks
-    {unlinkread, "unlinkread"},// 7 ticks
-   {concreate, "concreate"},// 430 ticks
-    {subdir, "subdir"},// 24 ticks
-    {fourfiles, "fourfiles"},// 26 ticks
-   {sharedfd, "sharedfd"},// 200 ticks
-    {dirtest, "dirtest"},// 4 ticks
-    {exectest, "exectest"},// 0 ticks
-    {bigargtest, "bigargtest"},//4 ticks
-    {bigwrite, "bigwrite"},// 170 ticks
-    {bsstest, "bsstest"},// 0 ticks
-   {sbrkbasic, "sbrkbasic"},// 90 ticks
-   {sbrkmuch, "sbrkmuch"},// 70 ticks
-   {kernmem, "kernmem"},// 17 ticks
-   {sbrkfail, "sbrkfail"},// 300 ticks
+  //  {manywrites, "manywrites"},  //800 ticks, too long
+  //  {execout, "execout"}, //1600 ticks, too long
+  //   {copyin, "copyin"},//5 ticks
+  //   {copyout, "copyout"},// 0 ticks
+  //   {copyinstr1, "copyinstr1"},// 0 ticks
+  //   {copyinstr2, "copyinstr2"},// 1 ticks
+  //   {copyinstr3, "copyinstr3"},// 0 ticks
+  //   {rwsbrk, "rwsbrk" },// 3 ticks
+  //   {truncate1, "truncate1"},// 4 ticks
+  //   {truncate2, "truncate2"},// 4 ticks
+  //  {truncate3, "truncate3"},// 0 ticks
+  //  {reparent2, "reparent2"},// 600 ticks, causes fails in 
+  //   {pgbug, "pgbug" },// 0 ticks
+  //  {sbrkbugs, "sbrkbugs" }, // 1 ticks
+  //   {badwrite, "badwrite" },
+  //   {badarg, "badarg" },// 200 ticks
+  //   {reparent, "reparent" },
+  //   {twochildren, "twochildren"},
+  //   {forkfork, "forkfork"},
+  //   {forkforkfork, "forkforkfork"},
+  //   {argptest, "argptest"},// 1 ticks
+  //  {createdelete, "createdelete"},// 200 ticks
+  //  {linkunlink, "linkunlink"},// 80 ticks
+  //   {linktest, "linktest"},// 9 ticks
+  //   {unlinkread, "unlinkread"},// 7 ticks
+  //  {concreate, "concreate"},// 430 ticks
+  //   {subdir, "subdir"},// 24 ticks
+  //   {fourfiles, "fourfiles"},// 26 ticks
+  //  {sharedfd, "sharedfd"},// 200 ticks
+  //   {dirtest, "dirtest"},// 4 ticks
+  //   {exectest, "exectest"},// 0 ticks
+  //   {bigargtest, "bigargtest"},//4 ticks
+  //   {bigwrite, "bigwrite"},// 170 ticks
+  //   {bsstest, "bsstest"},// 0 ticks
+  //  {sbrkbasic, "sbrkbasic"},// 90 ticks
+  //  {sbrkmuch, "sbrkmuch"},// 70 ticks
+  //  {kernmem, "kernmem"},// 17 ticks
+  //  {sbrkfail, "sbrkfail"},// 300 ticks
     {sbrkarg, "sbrkarg"},// 4 ticks
     {validatetest, "validatetest"},// 11 ticks
    {stacktest, "stacktest"},// 0 ticks
