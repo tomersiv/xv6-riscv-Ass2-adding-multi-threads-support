@@ -141,3 +141,17 @@ struct proc {
 //   void (*sa_handler)(int);
 //   uint sigmask;
 // };
+
+// Task 4.1 - defining binary semaphore struct
+enum bin_sem_state
+{
+    B_UNUSED,
+    B_ACQUIRED,
+    B_RELEASED
+};
+
+struct binSem
+{
+  enum bin_sem_state state;
+  struct spinlock lock;
+};

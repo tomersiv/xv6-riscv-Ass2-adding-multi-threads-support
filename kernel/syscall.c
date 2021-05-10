@@ -127,6 +127,12 @@ extern uint64 sys_kthread_join(void);
 // task 3.2 - kthread_exit system call
 extern uint64 sys_kthread_exit(void);
 
+// task 4.1 - binary semaphore system calls
+extern uint64 sys_bsem_alloc(void);
+extern uint64 sys_bsem_free(void);
+extern uint64 sys_bsem_down(void);
+extern uint64 sys_bsem_up(void);
+
 static uint64 (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
 [SYS_exit]    sys_exit,
@@ -162,7 +168,12 @@ static uint64 (*syscalls[])(void) = {
 // task 3.2 - kthread_join system call
 [SYS_kthread_join]  sys_kthread_join,
 // task 3.2 - kthread_exit system call
-[SYS_kthread_exit]  sys_kthread_exit
+[SYS_kthread_exit]  sys_kthread_exit,
+// task 4.1 - binary semaphore system calls
+[SYS_bsem_alloc] sys_bsem_alloc,
+[SYS_bsem_free] sys_bsem_free,
+[SYS_bsem_down] sys_bsem_down,
+[SYS_bsem_up] sys_bsem_up
 };
 
 void

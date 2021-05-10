@@ -18,6 +18,10 @@ struct spinlock pid_lock;
 int nexttid = 1;
 struct spinlock tid_lock;
 
+// task 4.1 - TODO: check if needed!!
+struct spinlock bsems_lock;
+struct binSem bin_semaphores[MAX_BSEM];
+
 extern void forkret(void);
 
 extern void *sigret_start(void);
@@ -1052,14 +1056,6 @@ void handle_signal()
   }
 }
 
-// TODO: check if needed!! Task 3.2 - the first scheduling of a thread created after kthread_create
-// will continue from userspace (with the epc set to start_func)
-void threadret(void)
-{
-  release(&mythread()->lock);
-  usertrapret();
-}
-
 // Task 3.2 - kthread_create syscall
 int kthread_create(void (*start_func)(), void *stack)
 {
@@ -1248,5 +1244,68 @@ void killThreadsExceptCurrent()
         allZombies = 0;
       }
     }
+  }
+}
+
+int bsem_alloc(void)
+{
+  int i = 0;
+  struct binSem *bsem;
+  acquire(&bsems_lock);
+  bsem = bin_semaphores;
+  while(bsem < &bin_semaphores[MAX_BSEM]) 
+  {
+    acquire(&bsem->lock);
+    if (bsem->state == B_UNUSED)
+    {
+      bsem->state = B_RELEASED;
+      release(&bsem->lock);
+      release(&bsems_lock);
+      return i;
+    }
+    release(&bsem->lock);
+    bsem++;
+    i++;
+  }
+  release(&bsems_lock);
+  return -1;
+}
+
+void bsem_free(int descriptor)
+{
+  if (descriptor >= 0 && descriptor < MAX_BSEM)
+  {
+    acquire(&bsems_lock);
+    acquire(&(&bin_semaphores[descriptor])->lock);
+    bin_semaphores[descriptor].state = B_UNUSED;
+    release(&(&bin_semaphores[descriptor])->lock);
+    release(&bsems_lock);
+  }
+}
+
+void bsem_down(int descriptor)
+{
+  if (descriptor >= 0 && descriptor < MAX_BSEM && bin_semaphores[descriptor].state != B_UNUSED)
+  {
+    struct binSem *bsem = &bin_semaphores[descriptor];
+    acquire(&bsem->lock);
+    while (bsem->state == B_ACQUIRED)
+    {
+      sleep(bsem, &bsem->lock);
+    }
+    bsem->state = B_ACQUIRED;
+    release(&bsem->lock);
+  }
+}
+
+void bsem_up(int descriptor)
+{
+  if (descriptor >= 0 && descriptor < MAX_BSEM && bin_semaphores[descriptor].state != B_UNUSED)
+  {
+    struct binSem *bsem = &bin_semaphores[descriptor];
+    acquire(&bsem->lock);
+    bsem->state = B_RELEASED;
+    release(&bsem->lock);
+    wakeup(bsem);
   }
 }
