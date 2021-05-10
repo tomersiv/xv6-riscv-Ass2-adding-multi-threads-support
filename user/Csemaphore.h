@@ -1,5 +1,5 @@
 #include "user.h"
-#include "kernel/fcntl.h"
+#include "../kernel/fcntl.h"
 
 struct counting_semaphore
 {

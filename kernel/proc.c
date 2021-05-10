@@ -990,7 +990,7 @@ void handle_signal()
   int i;
   for (i = 0; i < 32; i++)
   {
-    acquire(&p->lock);
+    // acquire(&p->lock);
     if ((p->pending_sig & (1 << i)) && (!p->handling_usersignal) && !((1 << i) & p->sig_mask)) // check if the signal is pending and if we are currently handling a signal
     {
       // handle signals according to signal handler type
@@ -1028,6 +1028,8 @@ void handle_signal()
       }
       else
       {
+        acquire(&p->lock);
+        acquire(&t->lock);
         // handle user-space signal handlers
         p->handling_usersignal = 1;
         // TODO: check this at reception hours
@@ -1049,10 +1051,12 @@ void handle_signal()
         t->trapframe->ra = t->trapframe->sp; // store sigret system call at the return address
 
         t->trapframe->epc = (uint64)p->sig_handlers[i]; // program counter points to the user-space handler function
+        release(&t->lock);
+        release(&p->lock);
       }
       p->pending_sig &= ~(1 << i);
     }
-    release(&p->lock);
+    // release(&p->lock);
   }
 }
 

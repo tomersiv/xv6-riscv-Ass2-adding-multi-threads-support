@@ -136,9 +136,7 @@ UPROGS=\
 	$U/_zombie\
 	$U/_test\
 	$U/_test2\
-	$U/_sigtests\
-	$U/_Csemaphore\
-	$U/_bsem\
+	$U/_signal_tests\
 
 
 fs.img: mkfs/mkfs README $(UPROGS)
