@@ -150,7 +150,7 @@ sys_kthread_join(void)
   int thread_id;
   int *status;
 
-  if (argint(0, &thread_id) < 1 || argaddr(1, (uint64 *)&status) < 0){
+  if (argint(0, &thread_id) < 0 || argaddr(1, (uint64 *)&status) < 0){
     return -1;
   }
   return kthread_join(thread_id, status);
