@@ -1,26 +1,76 @@
 #include "kernel/types.h"
 #include "user.h"
 
-void userhandler(){
-    fprintf(1, "userhandler test: success\n");
+int wait_sig = 0;
+
+void test_handler(int signum){
+    wait_sig = 1;
+    printf("Received sigtest\n");
 }
 
-void userhandlertest(){
-    struct sigaction newact = {
-        &userhandler,
-        0
-    };
+void test_handler2(int signum){
+    wait_sig = 1;
+    printf("Received sigtest\n");
+}
 
-    sigaction(4, &newact, 0);
+void signal_test(){
     int pid;
+    int testsig;
+    testsig=15;
+    struct sigaction act = {test_handler2, (uint)(1 << 29)};
+    struct sigaction old;
 
-    if ((pid = fork()) == 0) {
-        for (int i = 0; i < 100000000000; i++)
+    sigprocmask(0);
+    sigaction(testsig, &act, &old);
+    if((pid = fork()) == 0){
+        while(!wait_sig)
+            sleep(1);
+        exit(0);
+    }
+    kill(pid, testsig);
+    wait(&pid);
+    printf("Finished testing signals\n");
+}
+
+void sigkill_test(){
+    int pid;
+    int testsig;
+    testsig=SIGKILL;
+
+    if((pid = fork()) == 0){
+        while(!wait_sig)
         ;
         exit(0);
     }
-    kill(pid, 4);
-    wait(0);
+    kill(pid, testsig);
+    wait(&pid);
+    printf("Finished testing sigkill\n");
+}
+
+
+// child process should print a message in an endless loop
+// father will send SIGSTOP to childm then after 10 ticks
+// will send sigcont. the child should continue the endless
+// loop. ** THE EXPECTED RESULT IS AN ENDLESS LOOP **
+void sigstop_test(){
+    int pid;
+    int testsig;
+    testsig=SIGSTOP;
+
+    if ((pid = fork()) == 0) {
+        while(!wait_sig) {
+            printf("child is waiting for sigstop\n");
+        }
+        printf("child process resumed and now exiting\n");
+        exit(0);
+    }
+    sleep(5);
+    printf("sending sigstop to child\n");
+    kill(pid, testsig);
+    sleep(15);
+    printf("sending sigcont to child\n");
+    kill(pid, SIGCONT);
+    exit(0);
 }
 
 int main(int argc, char **argv){
@@ -73,17 +123,13 @@ int main(int argc, char **argv){
         
     wait(0);
 
-    // sigkill test
-    int d;
+    signal_test();
 
-    if ((d = fork()) == 0) {
-        for (;;)
-        ;
-    }
-    else {
-        kill(d, 4);
-        wait(0);
-    }
+    wait_sig = 0;
+    sigkill_test();
+
+    wait_sig = 0;
+    sigstop_test();
 
     exit(0);
 }

@@ -134,7 +134,6 @@ UPROGS=\
 	$U/_grind\
 	$U/_wc\
 	$U/_zombie\
-	$U/_test\
 	$U/_test2\
 	$U/_signal_tests\
 
