@@ -194,12 +194,10 @@ found:
     p->thread[i].chan = 0;
     p->thread[i].killed = 0;
 
-    // TODO: to check if we can change this allocation
     p->thread[i].trapframe = (struct trapframe *)t->trapframe + i;
     p->thread[i].parent = p;
   }
 
-  // TODO: maybe we need to acquire(&t->lock)
   acquire(&t->lock);
   t->tid = alloctid();
   t->state = USED;
@@ -355,7 +353,7 @@ void userinit(void)
 
 // Grow or shrink user memory by n bytes.
 // Return 0 on success, -1 on failure.
-int growproc(int n)// TODO: we acquired p->lock. is it good?
+int growproc(int n)
 {
   uint sz;
   struct proc *p = myproc();
@@ -407,14 +405,14 @@ int fork(void)
   }
   np->sz = p->sz;
 
-  acquire(&wait_lock); // TODO: maybe we can delete this
+  acquire(&wait_lock);
   // copy saved user registers.
   *(nt->trapframe) = *(t->trapframe);
 
   // Cause fork to return 0 in the child.
   nt->trapframe->a0 = 0;
 
-  release(&wait_lock); // TODO: maybe we can delete this
+  release(&wait_lock); 
 
   // increment reference counts on open file descriptors.
   for (i = 0; i < NOFILE; i++)
@@ -762,7 +760,7 @@ int kill(int pid, int signum)
     {
       p->pending_sig = p->pending_sig | (1 << signum);
 
-      if (signum == SIGKILL) // TODO: check this!!!
+      if (signum == SIGKILL) 
       {
         int allThreadsSleeping = 1;
         for (t = p->thread; t < &p->thread[NTHREAD]; t++)
@@ -1011,7 +1009,6 @@ void handle_signal()
       }
       else if (p->sig_handlers[i] == (void *)SIG_IGN)
       {
-        // TODO: check if we need to continue; here because we dont want to clear the bit
         // just clear the appropriate bit in p->pending_signal (at the end of this function)
       }
       else if (p->sig_handlers[i] == (void *)SIGKILL)
@@ -1032,7 +1029,6 @@ void handle_signal()
         acquire(&t->lock);
         // handle user-space signal handlers
         p->handling_usersignal = 1;
-        // TODO: check this at reception hours
         p->sig_mask = p->handlers_mask[i] | (1 << i);
 
         // before execution of the user-space handler - backup mask
@@ -1094,7 +1090,7 @@ found:
 
  *(t->trapframe) = *(mythread()->trapframe);
   t->trapframe->epc = (uint64)start_func;
-  t->trapframe->sp = (uint64)stack + MAX_STACK_SIZE; // TODO: maybe -16
+  t->trapframe->sp = (uint64)stack + MAX_STACK_SIZE; 
 
   t->state = T_RUNNABLE;
   release(&t->lock);
@@ -1126,7 +1122,7 @@ void kthread_exit(int status)
       // check if thread is not the last thread alive
       if (t->state != T_UNUSED && t->state != T_ZOMBIE) 
       {
-        // acquire(&wait_lock); // TODO: maybe need this
+        // acquire(&wait_lock); 
         release(&t->lock);
         acquire(&curr_thread->lock);
         curr_thread->xstate = status;
@@ -1185,7 +1181,7 @@ int kthread_join(int thread_id, int *status)
         else if (t->state != T_UNUSED)
         {
           release(&t->lock);
-          sleep(t, &wait_lock); // TODO: maybe need to define a new lock
+          sleep(t, &wait_lock); 
         }
       }
     }
@@ -1197,7 +1193,6 @@ int kthread_join(int thread_id, int *status)
   }
 }
 
-// TODO: different
 void kthread_free(struct thread *t)
 {
   t->tid = 0;
@@ -1220,9 +1215,6 @@ void killThreadsExceptCurrent()
     if (t != curr_thread)
     {
       acquire(&t->lock);
-
-      // TODO: original version, check if good
-      // if (t->state != T_UNUSED && t->state != T_ZOMBIE) 
       if (t->state != T_UNUSED)
       {
         t->killed = 1;
