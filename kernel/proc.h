@@ -1,5 +1,5 @@
 // task 3.1
-#define NTHREAD = 8;
+#define NTHREAD 8
 
 // Saved registers for kernel context switches.
 struct context {
@@ -24,6 +24,7 @@ struct context {
 // Per-CPU state.
 struct cpu {
   struct proc *proc;          // The process running on this cpu, or null.
+  struct thread *thread;      // The thread running on this cpu, or null.
   struct context context;     // swtch() here to enter scheduler().
   int noff;                   // Depth of push_off() nesting.
   int intena;                 // Were interrupts enabled before push_off()?
@@ -83,11 +84,28 @@ struct trapframe {
   /* 280 */ uint64 t6;
 };
 
-enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
+enum procstate { UNUSED, USED, RUNNABLE, ZOMBIE };
+enum threadstate { T_UNUSED, T_USED, T_SLEEPING, T_RUNNABLE, T_RUNNING, T_ZOMBIE };
+
+// Task 3.1 = defining thread struct
+struct thread {
+  struct spinlock lock;
+  enum threadstate state;      // Thread state
+  void *chan;                  // If non-zero, sleeping on chan
+  int killed;                  // If non-zero, have been killed
+  int xstate;                  // Exit status to be returned in kthread_join function
+  int tid;                     // Thread ID
+  struct proc *parent;         // Thread's Parent process
+  uint64 kstack;               // Virtual address of kernel stack
+  struct trapframe *trapframe; // data page for trampoline.S
+  struct context context;      // swtch() here to run thread
+  char name[16];               // thread name (debugging)
+  struct trapframe *usertrap_backup; // task 3.1
+};
 
 // Per-process state
 struct proc {
-  struct spinlock lock;
+  struct spinlock lock;       // TODO: i think we need to delete this
 
   // p->lock must be held when using these:
   enum procstate state;        // Process state
@@ -100,11 +118,11 @@ struct proc {
   struct proc *parent;         // Parent process
 
   // these are private to the process, so p->lock need not be held.
-  uint64 kstack;               // Virtual address of kernel stack
+  // uint64 kstack;               // Virtual address of kernel stack
   uint64 sz;                   // Size of process memory (bytes)
   pagetable_t pagetable;       // User page table
-  struct trapframe *trapframe; // data page for trampoline.S
-  struct context context;      // swtch() here to run process
+  // struct trapframe *trapframe; // TODO: i think we need to delete this. data page for trampoline.S
+  // struct context context;   // TODO: i think we need to delete this. swtch() here to run process
   struct file *ofile[NOFILE];  // Open files
   struct inode *cwd;           // Current directory
   char name[16];               // Process name (debugging)
@@ -113,8 +131,9 @@ struct proc {
   uint mask_backup;            // task 2.4 - backup of the mask before signal handlings
   void *sig_handlers[32];      // task 2.1.1
   uint handlers_mask[32];      // task 2.1.4 - blocked signals during handlers execution
-  struct trapframe *usertrap_backup;  // task 2.1.1
+  // struct trapframe *usertrap_backup;  // task 2.1.1
   int handling_usersignal;         // task 2.4 - a flag that indicates that a user signal is being handled
+  struct thread thread[NTHREAD];  // Task 3.1
 };
 
 // Task 2.1.4 - defining sigaction struct
@@ -123,14 +142,16 @@ struct proc {
 //   uint sigmask;
 // };
 
-// Task 3.1 = defining thread struct
-struct thread {
-  enum procstate state;        // Thread state
-  void *chan;                  // If non-zero, sleeping on chan
-  int killed;                  // If non-zero, have been killed
-  int xstate;                  // Exit status to be returned in kthread_join function
-  int tid;                     // Thread ID
-  struct proc *parent;         // Thread's Parent process
-  uint64 kstack;               // Virtual address of kernel stack
-  
+// Task 4.1 - defining binary semaphore struct
+enum bin_sem_state
+{
+    B_UNUSED,
+    B_ACQUIRED,
+    B_RELEASED
+};
+
+struct binSem
+{
+  enum bin_sem_state state;
+  struct spinlock lock;
 };

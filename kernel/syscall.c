@@ -34,20 +34,20 @@ fetchstr(uint64 addr, char *buf, int max)
 static uint64
 argraw(int n)
 {
-  struct proc *p = myproc();
+  struct thread *t = mythread();
   switch (n) {
   case 0:
-    return p->trapframe->a0;
+    return t->trapframe->a0;
   case 1:
-    return p->trapframe->a1;
+    return t->trapframe->a1;
   case 2:
-    return p->trapframe->a2;
+    return t->trapframe->a2;
   case 3:
-    return p->trapframe->a3;
+    return t->trapframe->a3;
   case 4:
-    return p->trapframe->a4;
+    return t->trapframe->a4;
   case 5:
-    return p->trapframe->a5;
+    return t->trapframe->a5;
   }
   panic("argraw");
   return -1;
@@ -105,6 +105,7 @@ extern uint64 sys_wait(void);
 extern uint64 sys_write(void);
 extern uint64 sys_uptime(void);
 
+
 // Task 2.1.3 - sigprocmask system call
 extern uint64 sys_sigprocmask(void);
 
@@ -113,6 +114,24 @@ extern uint64 sys_sigaction(void);
 
 // task 2.1.5 - sigret system call
 extern uint64 sys_sigret(void);
+
+// task 3.2 - kthread_create system call
+extern uint64 sys_kthread_create(void);
+
+// task 3.2 - kthread_id system call
+extern uint64 sys_kthread_id(void);
+
+// task 3.2 - kthread_join system call
+extern uint64 sys_kthread_join(void);
+
+// task 3.2 - kthread_exit system call
+extern uint64 sys_kthread_exit(void);
+
+// task 4.1 - binary semaphore system calls
+extern uint64 sys_bsem_alloc(void);
+extern uint64 sys_bsem_free(void);
+extern uint64 sys_bsem_down(void);
+extern uint64 sys_bsem_up(void);
 
 static uint64 (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
@@ -141,21 +160,34 @@ static uint64 (*syscalls[])(void) = {
 // Task 2.1.4 - sigaction system call
 [SYS_sigaction]   sys_sigaction,
 // task 2.1.5 - sigret system call
-[SYS_sigret]   sys_sigret
+[SYS_sigret]   sys_sigret,
+// task 3.2 - kthread_create system call
+[SYS_kthread_create]  sys_kthread_create,
+// task 3.2 - kthread_id system call
+[SYS_kthread_id]  sys_kthread_id,
+// task 3.2 - kthread_join system call
+[SYS_kthread_join]  sys_kthread_join,
+// task 3.2 - kthread_exit system call
+[SYS_kthread_exit]  sys_kthread_exit,
+// task 4.1 - binary semaphore system calls
+[SYS_bsem_alloc] sys_bsem_alloc,
+[SYS_bsem_free] sys_bsem_free,
+[SYS_bsem_down] sys_bsem_down,
+[SYS_bsem_up] sys_bsem_up
 };
 
 void
 syscall(void)
 {
   int num;
-  struct proc *p = myproc();
+  struct thread *t = mythread();
 
-  num = p->trapframe->a7;
+  num = t->trapframe->a7;
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
-    p->trapframe->a0 = syscalls[num]();
+    t->trapframe->a0 = syscalls[num]();
   } else {
     printf("%d %s: unknown sys call %d\n",
-            p->pid, p->name, num);
-    p->trapframe->a0 = -1;
+            t->tid, t->name, num);
+    t->trapframe->a0 = -1;
   }
 }

@@ -30,12 +30,19 @@ int sigprocmask(int);
 int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact);
 // task 2.1.5 - sigret system call
 void sigret(void);
-
-// Task 2.1.4 - defining sigaction struct
-// struct sigaction {
-//   void (*sa_handler)(int);
-//   uint sigmask;
-// };
+// task 3.2 - kthread_create system call
+int kthread_create(void (*start_func)(),void *stack);
+// task 3.2 - kthread_id system call
+int kthread_id(void);
+// task 3.2 - kthread_join system call
+int kthread_join(int thread_id, int* status);
+// task 3.2 - kthread_exit system call
+void kthread_exit(int status);
+// task 4.1 - binary semaphore system calls
+int bsem_alloc(void);
+void bsem_free(int);
+void bsem_down(int);
+void bsem_up(int);
 
 // ulib.c
 int stat(const char*, struct stat*);
@@ -53,3 +60,9 @@ void free(void*);
 int atoi(const char*);
 int memcmp(const void *, const void *, uint);
 void *memcpy(void *, const void *, uint);
+
+// Task 2.1.4 - defining sigaction struct
+// struct sigaction {
+//   void (*sa_handler)(int);
+//   uint sigmask;
+// };

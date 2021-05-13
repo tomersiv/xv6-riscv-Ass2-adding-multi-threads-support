@@ -42,3 +42,16 @@ entry("sigprocmask");
 entry("sigaction");
 # task 2.1.5 - sigret system call
 entry("sigret");
+# task 3.2 - kthread_create system call
+entry("kthread_create");
+# task 3.2 - kthread_id system call 
+entry("kthread_id");
+# task 3.2 - kthread_join system call
+entry("kthread_join");
+# task 3.2 - kthread_exit system call
+entry("kthread_exit");
+# task 4.1 - binary semaphore system calls
+entry("bsem_alloc");
+entry("bsem_free");
+entry("bsem_down");
+entry("bsem_up");

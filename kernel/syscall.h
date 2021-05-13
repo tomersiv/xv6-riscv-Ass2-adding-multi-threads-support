@@ -20,9 +20,24 @@
 #define SYS_link   19
 #define SYS_mkdir  20
 #define SYS_close  21
+
 // Task 2.1.3 - sigprocmask system call
 #define SYS_sigprocmask 22
 // task 2.1.4 - sigaction system call
 #define SYS_sigaction 23
 // task 2.1.5 - sigret system call
 #define SYS_sigret 24
+// task 3.2 - kthread_create system call
+#define SYS_kthread_create 25
+// task 3.2 - kthread_id system call
+#define SYS_kthread_id 26
+// task 3.2 - kthread_join system call
+#define SYS_kthread_join 27
+// task 3.2 - kthread_exit system call
+#define SYS_kthread_exit 28
+// task 4.1 - binary semaphore system calls
+#define SYS_bsem_alloc 29
+#define SYS_bsem_free 30
+#define SYS_bsem_down 31
+#define SYS_bsem_up 32
+
